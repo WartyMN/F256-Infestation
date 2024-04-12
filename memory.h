@@ -40,6 +40,17 @@
 #define ZP_OLD_IO_PAGE		0x13	// zero-page address holding the original IO page # before being changed
 #define ZP_PX				0x14	// zero-page address holding the 2-byte x coord for player
 #define ZP_PY				0x16	// zero-page address holding the 2-byte y coord for player
+#define ZP_JOY				0x18	// zero-page address holding the current state of the joysticks (both mapped to same thing; single-player game)
+#define ZP_NUM_BULLETS		0x19	// zero-page address holding the 1-byte count of bullets left in current clip for the current weapon
+#define ZP_NUM_CLIPS		0x20	// zero-page address holding the 1-byte count of clips for the current weapon
+#define ZP_NUM_WARPS		0x1b	// zero-page address holding the 1-byte count of warp modules owned by player
+#define ZP_SPEED			0x1c	// zero-page address holding the 1-byte num. pixels that player moves per round
+#define ZP_POINTS			0x1d	// zero-page address holding the 2-byte point count 
+#define ZP_HP				0x1e	// zero-page address holding the 1-byte count of HP remaining
+#define ZP_BULLET_DMG		0x1f	// zero-page address holding the 1-byte count of damage to be caused by each bullet of current player weapon
+#define ZP_PLAYER_DIR		0x20	// zero-page address holding the 1-byte direction player is facing. 0=north, 1=east, 2=south, 3=west. for showing which icon to use.
+#define ZP_LIVES			0x21	// zero-page address holding the 1-byte count of remaining lives before end of game. if 0, and player's HP runs out, game is over.
+#define ZP_PLAYER_DIR_PREV	0x22	// zero-page address holding the 1-byte direction player was facing last time checked
 
 
 // starting point for all storage to extended memory. if larger than 8K, increment as necessary

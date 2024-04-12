@@ -17,11 +17,13 @@
 
 // project includes
 #include "app.h"
+#include "comm_buffer.h"
 #include "general.h"
 #include "keyboard.h"
 #include "memory.h"
 //#include "overlay_em.h"
 #include "overlay_startup.h"
+#include "player.h"
 #include "text.h"
 #include "screen.h"
 #include "sys.h"
@@ -54,30 +56,40 @@
 /*                          File-scoped Variables                            */
 /*****************************************************************************/
 
+static uint8_t	joy2playerdir[11] = {0xff, 0, 4, 0xff, 6, 7, 5, 0xff, 2, 1, 3};	// takes a joystick input (minus any buttons), and returns the player direction associated with it.
+
 
 /*****************************************************************************/
 /*                             Global Variables                              */
 /*****************************************************************************/
 
 char*					global_string_buff1 = (char*)STORAGE_STRING_BUFFER_1;
-char*					global_string_buff2 = (char*)STORAGE_STRING_BUFFER_2;
+// global_string_buff2char*					global_string_buff2 = (char*)STORAGE_STRING_BUFFER_2;
 
-extern uint8_t			global_joy_state;	// tracks what's going on with j0/j1 (for this game, both do same thing)
+extern uint8_t			zp_joy;	// tracks what's going on with j0/j1 (for this game, both do same thing)
 
 extern uint8_t			zp_bank_num;
-extern uint8_t			zp_px;
-extern uint8_t			zp_py;
+extern uint16_t			zp_px;
+extern uint16_t			zp_py;
+extern uint16_t			zp_player_dir;
+extern uint16_t			zp_player_dir_prev;
 #pragma zpsym ("zp_bank_num");
 #pragma zpsym ("zp_px");
 #pragma zpsym ("zp_py");
+#pragma zpsym ("zp_joy");
+#pragma zpsym ("zp_player_dir");
+#pragma zpsym ("zp_player_dir_prev");
 
 
 /*****************************************************************************/
 /*                       Private Function Prototypes                         */
 /*****************************************************************************/
 
-// initialize various objects - once per run
-void App_Initialize(void);
+// initialize various objects - once
+void App_InitializeApp(void);
+
+// initialize game - once per game
+void App_InitializeGame(void);
 
 // handles user input
 uint8_t App_MainMenuLoop(void);
@@ -88,12 +100,90 @@ uint8_t App_MainMenuLoop(void);
 /*****************************************************************************/
 
 
-// initialize various objects - once per run
-void App_Initialize(void)
+// initialize various objects - once
+void App_InitializeApp(void)
 {
-	// show info about the host F256 and environment, as well as copyright, version of f/manager
+	kernel_init();
+
+	App_LoadOverlay(OVERLAY_STARTUP);
+	
+	if (Sys_InitSystem() == false)
+	{
+		App_Exit(0);
+	}
+	
+	Sys_SetBorderSize(0, 0); // want all 80 cols and 60 rows!
+	
+	Startup_SetUpSprites();
+	
+	// initialize the random number generator embedded in the Vicky
+	Startup_InitializeRandomNumGen();
+	
+	// initialize the ptps for the comms buff
+	Startup_InitializeCommsBuffer();
+	
+	// copy LUT into VICKY memory
+	
+	// teach VICKY where the sprites are and configure each one
+	
+	// teach VICKY where the tiles are
+	
+	// set up tilemap
+#define SPRITE_ROBOT_16F_PHYS_ADDR         0x24000
+#define SPRITE_ROBOT_16F_LOMED_ADDR			0x4000	// for use when setting sprite registers, assuming we set the 02 part already.
+#define SPRITE_HUMAN_1_8F_PHYS_ADDR        0x25000
+#define SPRITE_HUMAN_1_8F_LOMED_ADDR		0x5000	// for use when setting sprite registers, assuming we set the 02 part already.
+
+	
+	// tell VICKY where the sprite it, what size sprite it is, what color to use, and to enabled it
+	Sys_SwapIOPage(VICKY_IO_PAGE_REGISTERS);
+	R16(SPRITE0_X_LO) = zp_px;		
+	R16(SPRITE0_Y_LO) = zp_py;		
+	R8(SPRITE0_CTRL) = 0x41; //Size=16x16, Layer=0, LUT=0, Enabled	
+	//R8(SPRITE0_CTRL) = 0x01; //Size=32x32, Layer=0, LUT=0, Enabled	
+
+	// tell VICKY about the first human sprite and turn it on
+	R16(SPRITE0_X_LO + SPRITE_REG_LEN) = zp_px+40;		
+	R16(SPRITE0_Y_LO + SPRITE_REG_LEN) = zp_py+40;		
+	R8(SPRITE0_CTRL + SPRITE_REG_LEN) = 0x41; //Size=16x16, Layer=0, LUT=0, Enabled	
+
+	Sys_DisableIOBank();
+
+	
+	DEBUG_OUT(("%s %d: zp_px=%x + %x", __func__, __LINE__, zp_px & 0xff, zp_px >> 8));
+
+
+	App_LoadOverlay(OVERLAY_SCREEN);
+
+	// Do first draw of UI
+	Screen_Render();
+	Screen_ShowAppAboutInfo();
+}
+
+
+// initialize various objects - once per game
+void App_InitializeGame(void)
+{
 	App_LoadOverlay(OVERLAY_SCREEN);
 	Screen_ShowAppAboutInfo();
+
+	App_LoadOverlay(OVERLAY_STARTUP);
+	
+	// draw playfield
+	
+	// set up monsters
+	
+	// set up initial objects (poo, chips, ammo)
+	
+	// set up player
+	Startup_InitializePlayer();
+	
+	// do initial stats draw
+	Buffer_RefreshStatDisplay(true);
+	
+	// reset joystick condition map so it doesn't hang on from last game (or from junk on startup)
+	*(uint8_t*)ZP_JOY = 0;
+
 }
 
 
@@ -101,19 +191,29 @@ void App_Initialize(void)
 uint8_t App_MainMenuLoop(void)
 {
 	uint8_t				user_input;
+	uint8_t				joy_minus_buttons;
+	uint8_t				frame_odd_even = 0;
 	bool				exit_main_loop = false;
-	bool				success;
+	uint16_t			tank_sprite_loc;
+	uint16_t			base_tank_sprite_loc;
+	uint16_t			human_sprite_loc;
+	uint16_t			base_human_sprite_loc;
+
+	
+	tank_sprite_loc = base_tank_sprite_loc = SPRITE_ROBOT_16F_LOMED_ADDR;	// starting med/lo addr of tank sprite
+	human_sprite_loc = base_human_sprite_loc = SPRITE_HUMAN_1_8F_LOMED_ADDR;	// starting med/lo addr of human sprite
+	zp_player_dir_prev = zp_player_dir;
 	
 	// main loop
 	while (! exit_main_loop)
 	{
 		// turn off cursor - seems to turn itself off when kernal detects cursor position has changed. 
-		Sys_EnableTextModeCursor(false);
+		//Sys_EnableTextModeCursor(false);
 		
 		//DEBUG: track software stack pointer
 		//sprintf(global_string_buffer, "sp: %x%x", *(char*)0x52, *(char*)0x51);
 		//Buffer_NewMessage(global_string_buffer);
-
+		
 		do
 		{
 						
@@ -173,44 +273,50 @@ uint8_t App_MainMenuLoop(void)
 					Text_DrawStringAtXY(0, 0, "grenade     ", COLOR_BRIGHT_WHITE, COLOR_GREEN);
 					break;
 				
-				case JOYSTICK_EVENT_OCCURRED:
-					// some change happened with one of the joysticks. 
-					// can check global_joy_state to see what's going on
-					sprintf(global_string_buff1, "%d %x '%c'", global_joy_state, global_joy_state, global_joy_state);
-					Text_DrawStringAtXY(0, 1, global_string_buff1, COLOR_BRIGHT_WHITE, COLOR_RED);
-					Text_DrawStringAtXY(0, 2, "                                       ", COLOR_BRIGHT_WHITE, COLOR_RED);
-					
-					if (global_joy_state & JOY_UP_BIT)
-					{
-						Text_DrawStringAtXY(0, 2, "up", COLOR_BRIGHT_WHITE, COLOR_RED);
-					}
-
-					if (global_joy_state & JOY_DOWN_BIT)
-					{
-						Text_DrawStringAtXY(4, 2, "down", COLOR_BRIGHT_WHITE, COLOR_RED);
-					}
-
-					if (global_joy_state & JOY_LEFT_BIT)
-					{
-						Text_DrawStringAtXY(10, 2, "left", COLOR_BRIGHT_WHITE, COLOR_RED);
-					}
-
-					if (global_joy_state & JOY_RIGHT_BIT)
-					{
-						Text_DrawStringAtXY(16, 2, "right", COLOR_BRIGHT_WHITE, COLOR_RED);
-					}
-
-					if (global_joy_state & JOY_FIRE1_BIT)
-					{
-						Text_DrawStringAtXY(23, 2, "fire1", COLOR_BRIGHT_WHITE, COLOR_RED);
-					}
-
-					if (global_joy_state & JOY_FIRE2_BIT)
-					{
-						Text_DrawStringAtXY(30, 2, "fire2", COLOR_BRIGHT_WHITE, COLOR_RED);
-					}
-				
-					break;
+// 				case JOYSTICK_EVENT_OCCURRED:
+// 					// some change happened with one of the joysticks. 
+// 					// can check global_joy_state to see what's going on
+// 					//sprintf(global_string_buff1, "%d %x '%c'", *(uint8_t*)ZP_JOY, *(uint8_t*)ZP_JOY, *(uint8_t*)ZP_JOY);
+// 					//Text_DrawStringAtXY(0, 1, global_string_buff1, COLOR_BRIGHT_WHITE, COLOR_RED);
+// 					//Text_DrawStringAtXY(0, 2, "                                       ", COLOR_BRIGHT_WHITE, COLOR_RED);
+// 					
+// 					if (*(uint8_t*)ZP_JOY & JOY_UP_BIT)
+// 					{
+// 						//Buffer_NewMessage("joy up");
+// 						DEBUG_OUT(("%s %d: new joy input: UP", __func__, __LINE__));
+// 					}
+// 
+// 					if (*(uint8_t*)ZP_JOY & JOY_DOWN_BIT)
+// 					{
+// 						//Buffer_NewMessage("joy down");
+// 						DEBUG_OUT(("%s %d: new joy input: DOWN", __func__, __LINE__));
+// 					}
+// 
+// 					if (*(uint8_t*)ZP_JOY & JOY_LEFT_BIT)
+// 					{
+// 						//Buffer_NewMessage("joy left");
+// 						DEBUG_OUT(("%s %d: new joy input: LEFT", __func__, __LINE__));
+// 					}
+// 
+// 					if (*(uint8_t*)ZP_JOY & JOY_RIGHT_BIT)
+// 					{
+// 						//Buffer_NewMessage("joy right");
+// 						DEBUG_OUT(("%s %d: new joy input: RIGHT", __func__, __LINE__));
+// 					}
+// 
+// 					if (*(uint8_t*)ZP_JOY & JOY_FIRE1_BIT)
+// 					{
+// 						//Buffer_NewMessage("joy fire 1");
+// 						DEBUG_OUT(("%s %d: new joy input: FIRE 1", __func__, __LINE__));
+// 					}
+// 
+// 					if (*(uint8_t*)ZP_JOY & JOY_FIRE2_BIT)
+// 					{
+// 						//Buffer_NewMessage("joy fire 2");
+// 						DEBUG_OUT(("%s %d: new joy input: FIRE 2", __func__, __LINE__));
+// 					}
+// 				
+// 					break;
 				
 				case 0:
 					break;
@@ -220,12 +326,131 @@ uint8_t App_MainMenuLoop(void)
 					//Buffer_NewMessage(global_string_buff1);
 					//DEBUG_OUT(("%s %d: didn't know key %u", __func__, __LINE__, user_input));
 					//fatal(user_input);
-					sprintf(global_string_buff1, "%d %x '%c'", user_input, user_input, user_input);
-					Text_DrawStringAtXY(0, 0, global_string_buff1, COLOR_BRIGHT_WHITE, COLOR_BLUE);
+					//sprintf(global_string_buff1, "%d %x '%c'", user_input, user_input, user_input);
+					//Text_DrawStringAtXY(0, 0, global_string_buff1, COLOR_BRIGHT_WHITE, COLOR_BLUE);
 					//Text_SetCharAtXY(++zp_px, zp_py, user_input);
 					user_input = ACTION_INVALID_INPUT;
 					break;
 			}
+			
+			// regardless of changes to input, check for joystick switches that are down
+
+
+			if (*(uint8_t*)ZP_JOY & JOY_UP_BIT)
+			{
+				zp_py -= 2;
+			}
+
+			if (*(uint8_t*)ZP_JOY & JOY_DOWN_BIT)
+			{
+				zp_py += 2;
+				zp_player_dir += 2;
+			}
+
+			if (*(uint8_t*)ZP_JOY & JOY_LEFT_BIT)
+			{
+				zp_px -= 2;
+			}
+
+			if (*(uint8_t*)ZP_JOY & JOY_RIGHT_BIT)
+			{
+				zp_px += 2;
+				zp_player_dir += 1;
+			}
+
+			if (*(uint8_t*)ZP_JOY & JOY_FIRE1_BIT)
+			{
+				//
+			}
+
+			if (*(uint8_t*)ZP_JOY & JOY_FIRE2_BIT)
+			{
+				//
+			}
+			
+			// got joy buttons, clear them and set current player dir based on joy directions pushed
+			zp_joy &= 0b00001111;
+			
+			if (zp_joy)	// any joy not fire button
+			{
+				// dir changed
+				zp_player_dir = joy2playerdir[*(uint8_t*)ZP_JOY];
+			}
+		
+			Player_ValidateLocation();
+
+			// point to the appropriate tank shape
+			// LOGIC:
+			//   each sprite shape is 16x16=256 bytes. there are 16 total shapes, so exactly 4k of data.
+			//   sprites are arranged in clockwise order, from 12:00. each position has 2 shapes, frame1/frame2, for per-frame anim.
+			//   to get the right shape:
+			//     1. add 0 or FF for the frame offset
+			//     2. multiply zp_player_dir by 512 (PLAYER_DIR_NORTH = 0... PLAYER_DIR_NORTHWEST=7)
+			//        to make things fast, we have a preset offset calculation table.
+
+
+			if (zp_player_dir != zp_player_dir_prev)
+			{
+				tank_sprite_loc = SPRITE_ROBOT_16F_LOMED_ADDR;
+				tank_sprite_loc += (uint16_t)zp_player_dir * (uint16_t)512;
+				base_tank_sprite_loc = tank_sprite_loc;
+				zp_player_dir_prev = zp_player_dir;
+
+				// temp animate human in parallel with tank
+				human_sprite_loc = SPRITE_HUMAN_1_8F_LOMED_ADDR;
+				human_sprite_loc += (uint16_t)(zp_player_dir/2) * (uint16_t)512;
+				base_human_sprite_loc = human_sprite_loc;
+
+				// animate by swapping to the other frame of sprite
+				//tank_sprite_loc -= 0xff * (frame_odd_even % 2);
+// 				if ( (frame_odd_even % 2) == 0)
+// 				{
+// 					tank_sprite_loc -= 0xff;
+// 				}
+			}
+			else
+			{
+				// animate by swapping to the other frame of sprite
+				++frame_odd_even;
+
+				//tank_sprite_loc += 0xff * (frame_odd_even % 2);
+				if ( (frame_odd_even % 4) == 0)
+				{
+					tank_sprite_loc += (uint16_t)0x0100;
+					human_sprite_loc += (uint16_t)0x0100;
+				}
+				else
+				{
+					tank_sprite_loc = base_tank_sprite_loc;
+					human_sprite_loc = base_human_sprite_loc;
+				}
+			}
+
+			General_DelayTicks(800);
+			
+			//tank_sprite_loc += 256;
+			
+			Sys_SwapIOPage(VICKY_IO_PAGE_REGISTERS);
+			R8(SPRITE0_ADDR_LO) = tank_sprite_loc & 0xFF;
+			R8(SPRITE0_ADDR_MED) = (tank_sprite_loc) >> 8;
+			R8(SPRITE0_ADDR_LO + SPRITE_REG_LEN) = human_sprite_loc & 0xFF;
+			R8(SPRITE0_ADDR_MED + SPRITE_REG_LEN) = (human_sprite_loc) >> 8;
+
+			//R8(SPRITE0_ADDR_HI) = 0x03;	// we are placing robot sprites starting at 03 6000 in EM
+			Sys_DisableIOBank();
+			
+			// update sprite pos
+			Sys_SwapIOPage(VICKY_IO_PAGE_REGISTERS);
+			R16(SPRITE0_X_LO) = zp_px;		
+			R16(SPRITE0_Y_LO) = zp_py;		
+			R16(SPRITE0_X_LO + SPRITE_REG_LEN) = zp_px + 20;		
+			R16(SPRITE0_Y_LO + SPRITE_REG_LEN) = zp_py + 10;		
+			Sys_DisableIOBank();
+			
+			Buffer_RefreshStatDisplay(false);
+			
+			//DEBUG_OUT(("%s %d: X/Y=%u,%u; zp_px=%u + %u, %u + %u, vicky x=%u, y=%u, vickyH x=%u, y=%u", __func__, __LINE__, zp_px, zp_py, zp_px & 0xff, zp_px >> 8, *(uint8_t*)ZP_PX, *(uint8_t*)(ZP_PX+1), vicky_x, vicky_y, vicky_xh, vicky_yh));
+
 		} while (user_input == ACTION_INVALID_INPUT);				
 	} // while for exit loop
 	
@@ -253,6 +478,14 @@ void App_LoadOverlay(uint8_t the_overlay_em_bank_number)
 }
 
 
+// handle game over scenario: say you are dead, stop game, show hi scores, etc, etc.
+void App_GameOver(void)
+{
+	App_LoadOverlay(OVERLAY_SCREEN);
+	Screen_ShowGameOver();	
+}
+
+
 // if ending on error: display error message, wait for user to confirm, and exit
 // if no error, just exit
 void App_Exit(uint8_t the_error_number)
@@ -265,33 +498,36 @@ void App_Exit(uint8_t the_error_number)
 }
 
 
+// get random number between 1 and the_range + 1
+// must have seeded the number generator first with call to _randomize() --> cc65 function
+// if passed 0, returns 0.
+uint16_t App_GetRandom(uint16_t the_range)
+{
+	uint16_t the_num = 0;
+	uint16_t the_random;
+
+	// reason we have this check is that we'll get unexpected results if you do %0
+	if (the_range == 0)
+	{
+		return 0;
+	}
+
+	// need to have vicky registers available
+	Sys_SwapIOPage(VICKY_IO_PAGE_REGISTERS);
+
+	the_random = R16(RANDOM_NUM_GEN_LOW);
+	the_num = the_random % the_range + 1;
+
+	Sys_RestoreIOPage();
+
+	return the_num;
+}
 
 
 int main(void)
 {
-	kernel_init();
-
-	App_LoadOverlay(OVERLAY_STARTUP);
-	
-	if (Sys_InitSystem() == false)
-	{
-		App_Exit(0);
-	}
-	
-	Sys_SetBorderSize(0, 0); // want all 80 cols and 60 rows!
-	
-	// initialize the random number generator embedded in the Vicky
-	Startup_InitializeRandomNumGen();
-	
-	// clear screen and draw logo
-	//Startup_ShowLogo();
-	
-	App_LoadOverlay(OVERLAY_SCREEN);
-	
-	// Do first draw of UI
-	Screen_Render();
-
-	App_Initialize();
+	App_InitializeApp();
+	App_InitializeGame();
 	
 	App_MainMenuLoop();
 	

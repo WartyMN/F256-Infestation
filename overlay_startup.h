@@ -1,7 +1,7 @@
 /*
  * overlay_startup.h
  *
- *  Created on: Mar 11, 2024
+ *  Created on: Apr 5, 2024
  *      Author: micahbly
  */
 
@@ -10,7 +10,7 @@
 
 /* about this class
  *
- *  Routines for starting up f/manager, including show splash screen(s)
+ *  Routines for starting up Infestation!, including initializing graphics/sprites
  *    Some code here originated in sys.c and other places before being moved here
  *
  */
@@ -80,6 +80,14 @@ bool Sys_DetectScreenSize(void);
 //! @return	returns false on any error/invalid input.
 void Sys_SetBorderSize(uint8_t border_width, uint8_t border_height);
 
+// load sprite LUT and teach VICKY where the graphics  are
+void Startup_SetUpSprites(void);
+
+// set some player properties at start of game
+void Startup_InitializePlayer(void);
+
+// initialize the comms buffer and msg/status area (without drawing anything)
+void Startup_InitializeCommsBuffer(void);
 
 
 #endif /* OVERLAY_STARTUP_H_ */

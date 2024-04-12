@@ -46,6 +46,34 @@
 /*                               Definitions                                 */
 /*****************************************************************************/
 
+// ** serial comms related
+#define UART_BAUD_DIV_300		5244	// divisor for 300 baud
+#define UART_BAUD_DIV_600		2622	// divisor for 600 baud
+#define UART_BAUD_DIV_1200		1311	// divisor for 1200 baud
+#define UART_BAUD_DIV_1800		874		// divisor for 1800 baud
+#define UART_BAUD_DIV_2000		786		// divisor for 2000 baud
+#define UART_BAUD_DIV_2400		655		// divisor for 2400 baud
+#define UART_BAUD_DIV_3600		437		// divisor for 3600 baud
+#define UART_BAUD_DIV_4800		327		// divisor for 4800 baud
+#define UART_BAUD_DIV_9600		163		// divisor for 9600 baud
+#define UART_BAUD_DIV_19200		81		// divisor for 19200 baud
+#define UART_BAUD_DIV_38400		40		// divisor for 38400 baud
+#define UART_BAUD_DIV_57600		27		// divisor for 57600 baud
+#define UART_BAUD_DIV_115200	13		// divisor for 115200 baud
+
+#define UART_DATA_BITS			0b00000011	// 8 bits
+#define UART_STOP_BITS			0			// 1 stop bit
+#define UART_PARITY				0			// no parity
+#define UART_BRK_SIG			0b01000000
+#define UART_NO_BRK_SIG			0b00000000
+#define UART_DLAB_MASK			0b10000000
+#define UART_THR_IS_EMPTY		0b00100000
+#define UART_THR_EMPTY_IDLE		0b01000000
+#define UART_DATA_AVAILABLE		0b00000001
+#define UART_ERROR_MASK			0b10011110
+
+#define UART_MAX_SEND_ATTEMPTS	1000
+
 
 
 /*****************************************************************************/
@@ -63,7 +91,7 @@
 extern char*			global_string[NUM_STRINGS];
 
 extern char*			global_string_buff1;
-extern char*			global_string_buff2;
+// extern char*			global_string_buff2;
 
 
 extern uint8_t			zp_bank_num;
@@ -756,7 +784,135 @@ void General_DelayTicks(uint16_t ticks)
 
 #if defined LOG_LEVEL_1 || defined LOG_LEVEL_2 || defined LOG_LEVEL_3 || defined LOG_LEVEL_4 || defined LOG_LEVEL_5
 
-// NOTE: no serial debugging in this app: serial port is for BBS comms, so can't use for debugging!!		
+	#if defined USE_SERIAL_LOGGING
+		// LOGIC FOR SERIAL LOGGING:
+		//   we will use the baud speed defined in by macro in build script. 81N.
+		//   we will NOT check if the other side is receiving, we just blast away
+		//   no READING of the serial port happens. just writing to it.
+		//   UART setup is based on mgr42's dcopy project, the uart.asm file.
+		//   linux/mac setup for using 'screen' command as terminal: screen /dev/tty.usbserial-FT53JP031 300,cs8,-ixon,-ixoff,-istrip,-parenb
+
+		// set UART chip to DLAB mode
+		void Serial_SetDLAB(void);
+	
+		// turn off DLAB mode on UART chip
+		void Serial_ClearDLAB(void);
+			
+		// set up UART for serial comms
+		void Serial_InitUART(void);
+		
+		// send 1-255 bytes to the UART serial connection
+		// returns # of bytes successfully sent (which may be less than number requested, in event of error, etc.)
+		uint8_t Serial_SendData(uint8_t* the_buffer, uint16_t buffer_size);
+		
+		// send a byte over the UART serial connection
+		// if the UART send buffer does not have space for the byte, it will try for UART_MAX_SEND_ATTEMPTS then return an error
+		// returns false on any error condition
+		bool Serial_SendByte(uint8_t the_byte);
+		
+		// send 1-255 bytes to the UART serial connection
+		// returns # of bytes successfully sent (which may be less than number requested, in event of error, etc.)
+		uint8_t Serial_SendData(uint8_t* the_buffer, uint16_t buffer_size);
+		
+		
+		// set UART chip to DLAB mode
+		void Serial_SetDLAB(void)
+		{
+			Sys_SwapIOPage(VICKY_IO_PAGE_REGISTERS);
+			R8(UART_LCR) = R8(UART_LCR) | UART_DLAB_MASK;
+			Sys_RestoreIOPage();
+		}
+		
+		// turn off DLAB mode on UART chip
+		void Serial_ClearDLAB(void)
+		{
+			Sys_SwapIOPage(VICKY_IO_PAGE_REGISTERS);
+			R8(UART_LCR) = R8(UART_LCR) & (~UART_DLAB_MASK);
+			Sys_RestoreIOPage();
+		}
+			
+		// set up UART for serial comms
+		void Serial_InitUART(void)
+		{
+			Sys_SwapIOPage(VICKY_IO_PAGE_REGISTERS);
+			R8(UART_LCR) = UART_DATA_BITS | UART_STOP_BITS | UART_PARITY | UART_NO_BRK_SIG;
+			Serial_SetDLAB();
+			R16(UART_DLL) = UART_BAUD_DIV_57600;
+			Serial_ClearDLAB();
+			Sys_RestoreIOPage();
+		}
+		
+		// send a byte over the UART serial connection
+		// if the UART send buffer does not have space for the byte, it will try for UART_MAX_SEND_ATTEMPTS then return an error
+		// returns false on any error condition
+		bool Serial_SendByte(uint8_t the_byte)
+		{
+			uint8_t		error_check;
+			bool		uart_in_buff_is_empty = false;
+			uint16_t	num_tries = 0;
+			
+			Sys_SwapIOPage(VICKY_IO_PAGE_REGISTERS);
+			
+			error_check = R8(UART_LSR) & UART_ERROR_MASK;
+			
+			if (error_check > 0)
+			{
+				goto error;
+			}
+			
+			while (uart_in_buff_is_empty == false && num_tries < UART_MAX_SEND_ATTEMPTS)
+			{
+				uart_in_buff_is_empty = R8(UART_LSR) & UART_THR_IS_EMPTY;
+				++num_tries;
+			};
+			
+			if (uart_in_buff_is_empty == true)
+			{
+				goto error;
+			}
+			
+			R8(UART_THR) = the_byte;
+			
+			Sys_RestoreIOPage();
+			
+			return true;
+			
+			error:
+				Sys_RestoreIOPage();
+				return false;
+		}
+		
+		
+		// send 1-255 bytes to the UART serial connection
+		// returns # of bytes successfully sent (which may be less than number requested, in event of error, etc.)
+		uint8_t Serial_SendData(uint8_t* the_buffer, uint16_t buffer_size)
+		{
+			uint16_t	i;
+			uint8_t		the_byte;
+			
+			if (buffer_size > 256)
+			{
+				return 0;
+			}
+			
+			for (i=0; i <= buffer_size; i++)
+			{
+				the_byte = the_buffer[i];
+				
+				if (Serial_SendByte(the_byte) == false)
+				{
+					return i;
+				}
+			}
+			
+			// add a line return if we got this far
+			Serial_SendByte(0x0D);
+			
+			return i;
+		}
+		
+    
+	#endif
     	
 
 // DEBUG functionality I want:

@@ -55,9 +55,13 @@ rm -r $BUILD_DIR/*.o
 
 # compile
 cc65 -g --cpu $CC65CPU -t $CC65TGT $OPTI -I $CONFIG_DIR $TARGET_DEFS $PLATFORM_DEFS $DEBUG_DEF_1 $DEBUG_DEF_2 $DEBUG_DEF_3 $DEBUG_DEF_4 $DEBUG_DEF_5 $DEBUG_VIA_SERIAL $STACK_CHECK -T app.c -o $BUILD_DIR/app.s
+cc65 -g --cpu $CC65CPU -t $CC65TGT $OPTI -I $CONFIG_DIR $TARGET_DEFS $PLATFORM_DEFS $DEBUG_DEF_1 $DEBUG_DEF_2 $DEBUG_DEF_3 $DEBUG_DEF_4 $DEBUG_DEF_5 $DEBUG_VIA_SERIAL $STACK_CHECK -T comm_buffer.c -o $BUILD_DIR/comm_buffer.s
 cc65 -g --cpu $CC65CPU -t $CC65TGT $OPTI -I $CONFIG_DIR $TARGET_DEFS $PLATFORM_DEFS $DEBUG_DEF_1 $DEBUG_DEF_2 $DEBUG_DEF_3 $DEBUG_DEF_4 $DEBUG_DEF_5 $DEBUG_VIA_SERIAL $STACK_CHECK -T general.c -o $BUILD_DIR/general.s
 cc65 -g --cpu $CC65CPU -t $CC65TGT $OPTI -I $CONFIG_DIR $TARGET_DEFS $PLATFORM_DEFS $DEBUG_DEF_1 $DEBUG_DEF_2 $DEBUG_DEF_3 $DEBUG_DEF_4 $DEBUG_DEF_5 $DEBUG_VIA_SERIAL $STACK_CHECK -T keyboard.c -o $BUILD_DIR/keyboard.s
+cc65 -g --cpu $CC65CPU -t $CC65TGT $OPTI -I $CONFIG_DIR $TARGET_DEFS $PLATFORM_DEFS $DEBUG_DEF_1 $DEBUG_DEF_2 $DEBUG_DEF_3 $DEBUG_DEF_4 $DEBUG_DEF_5 $DEBUG_VIA_SERIAL $STACK_CHECK -T level.c -o $BUILD_DIR/level.s
+cc65 -g --cpu $CC65CPU -t $CC65TGT $OPTI -I $CONFIG_DIR $TARGET_DEFS $PLATFORM_DEFS $DEBUG_DEF_1 $DEBUG_DEF_2 $DEBUG_DEF_3 $DEBUG_DEF_4 $DEBUG_DEF_5 $DEBUG_VIA_SERIAL $STACK_CHECK -T object.c -o $BUILD_DIR/object.s
 cc65 -g --cpu $CC65CPU -t $CC65TGT --code-name OVERLAY_STARTUP $OPTI -I $CONFIG_DIR $TARGET_DEFS $PLATFORM_DEFS $DEBUG_DEF_1 $DEBUG_DEF_2 $DEBUG_DEF_3 $DEBUG_DEF_4 $DEBUG_DEF_5 $DEBUG_VIA_SERIAL $STACK_CHECK -T overlay_startup.c -o $BUILD_DIR/overlay_startup.s
+cc65 -g --cpu $CC65CPU -t $CC65TGT $OPTI -I $CONFIG_DIR $TARGET_DEFS $PLATFORM_DEFS $DEBUG_DEF_1 $DEBUG_DEF_2 $DEBUG_DEF_3 $DEBUG_DEF_4 $DEBUG_DEF_5 $DEBUG_VIA_SERIAL $STACK_CHECK -T player.c -o $BUILD_DIR/player.s
 cc65 -g --cpu $CC65CPU -t $CC65TGT --code-name OVERLAY_SCREEN $OPTI -I $CONFIG_DIR $TARGET_DEFS $PLATFORM_DEFS $DEBUG_DEF_1 $DEBUG_DEF_2 $DEBUG_DEF_3 $DEBUG_DEF_4 $DEBUG_DEF_5 $DEBUG_VIA_SERIAL $STACK_CHECK -T screen.c -o $BUILD_DIR/screen.s
 cc65 -g --cpu $CC65CPU -t $CC65TGT $OPTI -I $CONFIG_DIR $TARGET_DEFS $PLATFORM_DEFS $DEBUG_DEF_1 $DEBUG_DEF_2 $DEBUG_DEF_3 $DEBUG_DEF_4 $DEBUG_DEF_5 $DEBUG_VIA_SERIAL $STACK_CHECK -T strings.c -o $BUILD_DIR/strings.s
 cc65 -g --cpu $CC65CPU -t $CC65TGT $OPTI -I $CONFIG_DIR $TARGET_DEFS $PLATFORM_DEFS $DEBUG_DEF_1 $DEBUG_DEF_2 $DEBUG_DEF_3 $DEBUG_DEF_4 $DEBUG_DEF_5 $DEBUG_VIA_SERIAL $STACK_CHECK -T sys.c -o $BUILD_DIR/sys.s
@@ -72,9 +76,13 @@ echo "\n**************************\nCA65 assemble start...\n********************
 # assemble into object files
 cd $BUILD_DIR
 ca65 -t $CC65TGT app.s
+ca65 -t $CC65TGT comm_buffer.s
 ca65 -t $CC65TGT general.s
 ca65 -t $CC65TGT keyboard.s
+ca65 -t $CC65TGT level.s
+ca65 -t $CC65TGT object.s
 ca65 -t $CC65TGT overlay_startup.s
+ca65 -t $CC65TGT player.s
 ca65 -t $CC65TGT screen.s
 ca65 -t $CC65TGT strings.s
 ca65 -t $CC65TGT sys.s
@@ -91,15 +99,18 @@ ca65 -t $CC65TGT ../memory.asm -o memory.o
 echo "\n**************************\nLD65 link start...\n**************************\n"
 
 # link files into an executable
-ld65 -C $CONFIG_DIR/$OVERLAY_CONFIG -o infest.rom kernel.o app.o general.o keyboard.o memory.o overlay_startup.o screen.o strings.o sys.o text.o $CC65LIB -m infest_$CC65TGT.map -Ln labels.lbl
+ld65 -C $CONFIG_DIR/$OVERLAY_CONFIG -o infest.rom kernel.o app.o comm_buffer.o general.o keyboard.o level.o memory.o object.o player.o overlay_startup.o screen.o strings.o sys.o text.o $CC65LIB -m infest_$CC65TGT.map -Ln labels.lbl
 
 
 echo "\n**************************\nCC65 tasks complete\n**************************\n"
 
+# get copy of sprite data
+cp $PROJECT/data/robot.bin $BUILD_DIR/
+cp $PROJECT/data/human1.bin $BUILD_DIR/
 
 #build pgZ for disk
-fname=("infest.rom" "infest.rom.1" "infest.rom.2")
-addr=("990700" "000001" "002001")
+fname=("infest.rom" "infest.rom.1" "infest.rom.2" "robot.bin" "human1.bin")
+addr=("990700" "000001" "002001" "004002" "005002")
 
 
 for ((i = 1; i <= $#fname; i++)); do
@@ -109,7 +120,7 @@ done
 echo -n 'Z' >> pgZ_start.hdr
 echo -n '\x99\x07\x00\x00\x00\x00' >> pgZ_end.hdr
 
-cat pgZ_start.hdr infest.rom.hdr infest.rom infest.rom.1.hdr infest.rom.1 infest.rom.2.hdr infest.rom.2 pgZ_end.hdr > infest.pgZ 
+cat pgZ_start.hdr infest.rom.hdr infest.rom infest.rom.1.hdr infest.rom.1 infest.rom.2.hdr infest.rom.2 robot.bin.hdr robot.bin human1.bin.hdr human1.bin pgZ_end.hdr > infest.pgZ 
 
 rm *.hdr
 

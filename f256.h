@@ -54,7 +54,7 @@
 #define VIDEO_MODE_DOUBLE_Y_BIT		0x04	//!> the bits in the 3rd byte of the system control register control text mode doubling in vertical. if set, text mode chars are doubled in size, producing 25 or 30 chars down
 
 #define GAMMA_MODE_DIPSWITCH_BIT	0x20	//!>the bits in the 2nd byte of the system control register reflect dip switch setting for control gamma correction on/off
-#define GAMMA_MODE_ONOFF_BITS		0x03	//!>the bits in the 3rd byte of the system control register control gamma correction on/off
+#define GAMMA_MODE_ONOFF_BITS		0b01000000	//!>the bits in the 1st byte of the system control register control gamma correction on/off
 
 
 // Tiny VICKY I/O pages
@@ -63,11 +63,22 @@
 #define VICKY_IO_PAGE_CHAR_MEM			2	// Text display character matrix
 #define VICKY_IO_PAGE_ATTR_MEM			3	// Text display color matrix
 
+// Address	R/W	7 6 5 4 3 2 1 0 
+// 0xD000 	R/W X GAMMA SPRITE TILE BITMAP GRAPH OVRLY TEXT 
+// 0xD001 	R/W — FON_SET FON_OVLY MON_SLP DBL_Y DBL_X CLK_70
+
+// Address	R/W 7  6 5 4  3  2 1 0 
+// 0xD002	R/W —  LAYER1 —  LAYER0 
+// 0xD003	R/W —  - - -  -  LAYER2
+//Table 4.2: Bitmap and Tile Map Layer Registers
+
 // Tiny VICKY I/O page 0 addresses
 #define VICKY_BASE_ADDRESS				0xd000		// Tiny VICKY offset/first register
-#define VICKY_MASTER_CTRL_REG_L			0xd000		// Tiny VICKY Master Control Register - low - graphic mode/text mode/etc.
-#define VICKY_MASTER_CTRL_REG_H			0xd001		// Tiny VICKY Master Control Register - high - screen res, etc.
-#define VICKY_GAMMA_CTRL_REG			0xd002		// Tiny VICKY Gamma Control Register
+#define VICKY_GAMMA_CTRL_REG			0xd000		// On F256, the gamme control is the 7th bit of the master control reg
+#define VICKY_MASTER_CTRL_REG_L			0xd000		// Tiny VICKY Master Control Register - low - gamma, sprite, tiles, bitmap, graphics, text modes
+#define VICKY_MASTER_CTRL_REG_H			0xd001		// Tiny VICKY Master Control Register - high - font 1/2, screen res, etc.
+#define VICKY_LAYER_CTRL_1				0xd002		// VICKY Bitmap and Tile Map Layer Register 1
+#define VICKY_LAYER_CTRL_2				0xd003		// VICKY Bitmap and Tile Map Layer Register 2
 #define VICKY_BORDER_CTRL_REG			0xd004		// Tiny VICKY Border Control Register
 #define VICKY_BORDER_COLOR_B			0xd005		// Tiny VICKY Border Color Blue
 #define VICKY_BORDER_COLOR_G			0xd006		// Tiny VICKY Border Color Green
@@ -168,6 +179,7 @@
 #define SPRITE0_X_HI					0xd905		// Sprite #0 X position
 #define SPRITE0_Y_LO					0xd906		// Sprite #0 Y position
 #define SPRITE0_Y_HI					0xd907		// Sprite #0 Y position
+#define SPRITE_REG_LEN					0x08		// number of bytes between start of one sprite register set and the next
 
 #define DMA_CTRL						0xdf00		// VICKY's DMA control register
 #define DMA_STATUS						0xdf01		// DMA status register (Read Only)

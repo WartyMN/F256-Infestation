@@ -30,6 +30,17 @@
 	.exportzp	_zp_old_io_page
 	.exportzp	_zp_px
 	.exportzp	_zp_py
+	.exportzp	_zp_joy
+	.exportzp	_zp_num_bullets
+	.exportzp	_zp_num_clips
+	.exportzp	_zp_num_warps
+	.exportzp	_zp_speed
+	.exportzp	_zp_points
+	.exportzp	_zp_hp
+	.exportzp	_zp_bullet_dmg
+	.exportzp	_zp_player_dir
+	.exportzp	_zp_lives
+	.exportzp	_zp_player_dir_prev
 	
 
 ; F256 DMA addresses and bit values
@@ -52,7 +63,7 @@ DMA_COUNT = $DF0C		; Number of bytes to fill or copy
 
 .segment "ZEROPAGE_LK" : zeropage
 
-; -- ZErOPAGE_LK starts at $10
+; -- ZErOPAGE_LK starts at $10, size = $2c;
 
 _zp_bank_slot:			.res 1	; $10
 _zp_bank_num:			.res 1
@@ -60,8 +71,18 @@ _zp_old_bank_num:		.res 1
 _zp_old_io_page:		.res 1	; 
 _zp_px:					.res 2
 _zp_py:					.res 2
+_zp_joy:				.res 1
+_zp_num_bullets:		.res 1
+_zp_num_clips:			.res 1
+_zp_num_warps:			.res 1
+_zp_speed:				.res 1
+_zp_points:				.res 2	
+_zp_hp:					.res 1
+_zp_bullet_dmg:			.res 1
+_zp_player_dir:			.res 1
+_zp_lives:				.res 1
+_zp_player_dir_prev:	.res 1
 
-	
 	
 ; ---------------------------------------------------------------
 ; uint8_t __fastcall__ Memory_SwapInNewBank(uint8_t the_bank_slot)

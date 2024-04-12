@@ -56,7 +56,7 @@
 
 extern char*				global_string[NUM_STRINGS];
 extern char*				global_string_buff1;
-extern char*				global_string_buff2;
+// extern char*				global_string_buff2;
 
 
 extern uint8_t				zp_bank_num;
@@ -94,7 +94,13 @@ void Screen_DrawUI(void)
 
 
 
-
+// show game over screen
+void Screen_ShowGameOver(void)
+{
+	Text_ClearScreen(APP_FOREGROUND_COLOR, APP_BACKGROUND_COLOR);
+	
+	Text_DrawStringAtXY(10, 10, "Game over!", COLOR_BRIGHT_BLUE, COLOR_BRIGHT_WHITE);
+}
 
 
 // set up screen variables and draw screen for first time
@@ -104,10 +110,11 @@ void Screen_Render(void)
 }
 
 
-// display information about f/manager
+// display information about game
 void Screen_ShowAppAboutInfo(void)
 {
 	// show app name, version, and credit
+	Text_DrawStringAtXY(0, 59, "This game made during April 5-7, 2024 F256 Game Jam", COLOR_BRIGHT_BLUE, COLOR_BRIGHT_WHITE);
 
 }
 

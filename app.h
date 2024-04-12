@@ -56,22 +56,26 @@
 /*****************************************************************************/
 
 // temp storage for data outside of normal cc65 visibility - extra memory!
-#define STORAGE_GETSTRING_BUFFER			0x0400	// interbank buffer to store individual strings retrieved from EM
-#define STORAGE_GETSTRING_BUFFER_LEN		256	// 1-page buffer. see cc65 memory config file. this is outside cc65 space.
-#define STORAGE_FILE_BUFFER_1				0x0500	// interbank buffer for file reading operations
-#define STORAGE_FILE_BUFFER_1_LEN			256	// 1-page buffer. see cc65 memory config file. this is outside cc65 space.
-#define STORAGE_STRING_BUFFER_1				(STORAGE_FILE_BUFFER_1 + STORAGE_FILE_BUFFER_1_LEN)	// temp string merge/etc buff
+#define CODE_START							0x799
+#define STORAGE_INTERBANK_BUFFER			0x0400	// 1-page buffer. see cc65 memory config file. this is outside cc65 space.
+#define STORAGE_INTERBANK_BUFFER_LEN		0x0100	// 1-page buffer. see cc65 memory config file. this is outside cc65 space.
+#define STORAGE_PLAYER						(STORAGE_INTERBANK_BUFFER + STORAGE_INTERBANK_BUFFER_LEN)
+#define STORAGE_PLAYER_LEN            		26
+#define STORAGE_MISSILES					(STORAGE_PLAYER + STORAGE_PLAYER_LEN)
+#define STORAGE_MISSILES_LEN            	(6*10)
+#define STORAGE_MONSTERS					(STORAGE_MISSILES + STORAGE_MISSILES_LEN)
+#define STORAGE_MONSTERS_LEN            	(10*20)
+#define STORAGE_CHIPS						(STORAGE_MONSTERS + STORAGE_MONSTERS_LEN)
+#define STORAGE_CHIPS_LEN            		(5*6)
+
+#define STORAGE_STRING_BUFFER_1				(CODE_START - STORAGE_STRING_BUFFER_1_LEN)	// temp string merge/etc buff
 #define STORAGE_STRING_BUFFER_1_LEN			204	// 204b buffer. see cc65 memory config file. this is outside cc65 space.
-#define STORAGE_STRING_BUFFER_2				(STORAGE_STRING_BUFFER_1 + STORAGE_STRING_BUFFER_1_LEN)	// temp string merge/etc buff
-#define STORAGE_STRING_BUFFER_1_LEN			204	// 204b buffer. 
-#define STORAGE_TEMP_UNUSED_1B				(STORAGE_STRING_BUFFER_2 + STORAGE_STRING_BUFFER_2_LEN)	// 799 is hard coded, so this is just noting that we have 1 unused byte here.
+#define MAX_ALLOWED_STRING_SIZE				(STORAGE_STRING_BUFFER_1_LEN - 1)	// arbitrary
 
-
-#define STRING_STORAGE_SLOT                0x06
-#define STRING_STORAGE_VALUE               0x12
-#define STRING_STORAGE_PHYS_ADDR           0x24000
-
-
+#define SPRITE_ROBOT_16F_PHYS_ADDR         0x24000
+#define SPRITE_ROBOT_16F_LOMED_ADDR			0x4000	// for use when setting sprite registers, assuming we set the 02 part already.
+#define SPRITE_HUMAN_1_8F_PHYS_ADDR        0x25000
+#define SPRITE_HUMAN_1_8F_LOMED_ADDR		0x5000	// for use when setting sprite registers, assuming we set the 02 part already.
 
 /*****************************************************************************/
 /*                           App-wide color choices                          */
@@ -105,12 +109,12 @@
 #define MOVE_DOWN_ALT				's'
 #define MOVE_LEFT_ALT				'a'
 // joystick 0
-#define JOY_UP_BIT					0b00000001
-#define JOY_DOWN_BIT				0b00000010
-#define JOY_LEFT_BIT				0b00000100
-#define JOY_RIGHT_BIT				0b00001000
-#define JOY_FIRE1_BIT				0b00010000
-#define JOY_FIRE2_BIT				0b00100000
+#define JOY_UP_BIT					0b00000001	// 1
+#define JOY_DOWN_BIT				0b00000010  // 2
+#define JOY_LEFT_BIT				0b00000100  // 4
+#define JOY_RIGHT_BIT				0b00001000  // 8
+#define JOY_FIRE1_BIT				0b00010000  // 16
+#define JOY_FIRE2_BIT				0b00100000  // 32
 
 #define ACTION_FIRE					CH_SPACE
 #define ACTION_WARP					'/'
@@ -197,23 +201,13 @@
 /*                       Public Function Prototypes                          */
 /*****************************************************************************/
 
-// Draws the progress bar frame on the screen
-void App_ShowProgressBar(void);
+// get random number between 1 and the_range + 1
+// must have seeded the number generator first with call to _randomize() --> cc65 function
+// if passed 0, returns 0.
+uint16_t App_GetRandom(uint16_t the_range);
 
-// Hides the progress bar frame on the screen
-void App_HideProgressBar(void);
-
-// draws the 'bar' part of the progress bar, according to a % complete passed (0-100 integer)
-void App_UpdateProgressBar(uint8_t progress_bar_total);
-
-// // copy 256b chunks of data between specified 6502 addr and the fixed address range in EM, using bank switching -- no DMA
-// // em_bank_num is used to derive the base EM address
-// // page_num is used to calculate distance from the base EM address
-// // set to_em to true to copy from CPU space to EM, or false to copy from EM to specified CPU addr. PARAM_COPY_TO_EM/PARAM_COPY_FROM_EM
-// void App_EMDataCopy(uint8_t* cpu_addr, uint8_t em_bank_num, uint8_t page_num, bool to_em);
-
-// read the real time clock and display it
-void App_DisplayTime(void);
+// handle game over scenario: say you are dead, stop game, show hi scores, etc, etc.
+void App_GameOver(void);
 
 // display error message, wait for user to confirm, and exit
 void App_Exit(uint8_t the_error_number);

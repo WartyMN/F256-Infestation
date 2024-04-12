@@ -1,31 +1,25 @@
 /*
- * screen.h
+ * object.h
  *
- *  Created on: Jan 11, 2023
+ *  Created on: Apr 7, 2024
  *      Author: micahbly
  */
 
-#ifndef SCREEN_H_
-#define SCREEN_H_
+#ifndef OBJECT_H_
+#define OBJECT_H_
 
 /* about this class
  *
- *** things a screen needs to be able to do
+ *  Routines and structures for in-game objects such as computer chips, ammo clips, and human poo (think all-natural land mine)
  *
- * draw the file manager screen
- * draw individual buttons
- * update visual state of individual buttons
- *
- *** things a screen has
- *
- *
+ *  Needed functionality:
+ *  - 
+ *  - 
  */
 
 /*****************************************************************************/
 /*                                Includes                                   */
 /*****************************************************************************/
-
-//#include <string.h>
 
 #include "app.h"
 #include "text.h"
@@ -37,10 +31,16 @@
 /*****************************************************************************/
 
 
-#define CH_INVERSE_SPACE				7		// useful for progress bars as a slot fully used up
-#define CH_CHECKERBOARD					199		// useful for progress bars as a slot fully used up
-#define CH_UNDERSCORE					148		// this is one line up from a pure underscore, but works if text right under it. 0x5f	// '_'
-#define CH_OVERSCORE					0x0e	// opposite of '_'
+#define CHIP_ID_Z80							0
+#define CHIP_ID_8088						1
+#define CHIP_ID_6502						2
+#define CHIP_ID_68030						3
+#define CHIP_ID_8800						4
+#define MAX_CHIPS							5		// number of known types of computer chips (food/poison)
+
+#define OBJECT_TYPE_CHIP					0		// for Object->type_id_
+#define OBJECT_TYPE_CLIP					1
+#define OBJECT_TYPE_POO						2
 
 
 /*****************************************************************************/
@@ -51,20 +51,46 @@
 /*                                 Structs                                   */
 /*****************************************************************************/
 
+// note: poo type objects don't need a struct. they have no name, there is only kind (so all can use same player-modification function), etc. 
+
+typedef struct Chip {
+	void		(*fn_)(void);
+	char		name_[6];
+} Chip;
+
+typedef struct Object {
+	uint8_t		type_id_;		// chip, clip, poo
+	uint16_t	x_;				// current location in pixels
+	uint16_t	y_;
+	uint8_t		sprite_id_;		// 1-63, the ID of the sprite associated with this object.
+} Object;
 
 
 /*****************************************************************************/
 /*                       Public Function Prototypes                          */
 /*****************************************************************************/
 
-// set up screen variables and draw screen for first time
-void Screen_Render(void);
+// **** SETTERS *****
 
-// display information about game
-void Screen_ShowAppAboutInfo(void);
-
-// show game over screen
-void Screen_ShowGameOver(void);
+                    
 
 
-#endif /* SCREEN_H_ */
+// **** GETTERS *****
+
+
+
+// ***** ITEM Management FUNCTIONS ****
+
+
+
+
+// ***** COMBAT FUNCTIONS ****
+
+
+
+
+// **** OTHER FUNCTIONS *****
+
+
+
+#endif /* OBJECT_H_ */

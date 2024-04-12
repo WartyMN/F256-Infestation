@@ -293,66 +293,66 @@ bool Kernal_AnyKeyEvent()
 //     return gathered;
 // }
 // 
-// static int
-// kernel_write(uint8_t fd, void *buf, uint8_t nbytes)
-// {
-//     args.file.read.stream = fd;
-//     args.common.buf = buf;
-//     args.common.buflen = nbytes;
-//     CALL(File.Write);
-//     if (error) {
-//         return -1;
-//     }
-// 
-//     for(;;) {
-//         event.type = 0;
-//         asm("jsr %w", VECTOR(NextEvent));
-//         if (event.type == EVENT(file.WROTE)) {
-//             return event.file.data.delivered;
-//         }
-//         if (event.type == EVENT(file.ERROR)) {
-//             return -1;
-//         }
-//     }
-// }
-// 
-// int 
-// write(int fd, const void *buf, uint16_t nbytes)
-// {
-//     uint8_t  *data = buf;
-//     int      total = 0;
-//     
-//     uint8_t  writing;
-//     int      written;
-//     
-//     if (fd == 1) {
-//         int i;
-//         char *text = (char*) buf;
-//         for (i = 0; i < nbytes; i++) {
-//             out(text[i]);
-//         }
-//         return i;
-//     }
-//     
-//     while (nbytes) {
-//         
-//         if (nbytes > 254) {
-//             writing = 254;
-//         } else {
-//             writing = nbytes;
-//         }
-//         
-//         written = kernel_write(fd, data+total, writing);
-//         if (written <= 0) {
-//             return -1;
-//         }
-//         
-//         total += written;
-//         nbytes -= written;
-//     }
-//         
-//     return total;
-// }
+static int
+kernel_write(uint8_t fd, void *buf, uint8_t nbytes)
+{
+    args.file.read.stream = fd;
+    args.common.buf = buf;
+    args.common.buflen = nbytes;
+    CALL(File.Write);
+    if (error) {
+        return -1;
+    }
+
+    for(;;) {
+        event.type = 0;
+        asm("jsr %w", VECTOR(NextEvent));
+        if (event.type == EVENT(file.WROTE)) {
+            return event.file.data.delivered;
+        }
+        if (event.type == EVENT(file.ERROR)) {
+            return -1;
+        }
+    }
+}
+
+int 
+write(int fd, const void *buf, uint16_t nbytes)
+{
+    uint8_t  *data = buf;
+    int      total = 0;
+    
+    uint8_t  writing;
+    int      written;
+    
+    if (fd == 1) {
+        int i;
+        char *text = (char*) buf;
+        for (i = 0; i < nbytes; i++) {
+            out(text[i]);
+        }
+        return i;
+    }
+    
+    while (nbytes) {
+        
+        if (nbytes > 254) {
+            writing = 254;
+        } else {
+            writing = nbytes;
+        }
+        
+        written = kernel_write(fd, data+total, writing);
+        if (written <= 0) {
+            return -1;
+        }
+        
+        total += written;
+        nbytes -= written;
+    }
+        
+    return total;
+}
 // 
 // 
 // int

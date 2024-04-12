@@ -67,7 +67,8 @@ static KeyRepeater		keyboard_repeater;
 
 // extern char* 			global_string_buffer;	// just need for debugging
 
-uint8_t			global_joy_state;
+//uint8_t			global_joy_state;
+extern uint8_t				zp_joy;
 
 extern struct call_args args; // in gadget's version of f256 lib, this is allocated and initialized with &args in crt0. 
 extern struct event_t event; // in gadget's version of f256 lib, this is allocated and initialized with &event in crt0. 
@@ -76,6 +77,7 @@ extern char error;
 
 #pragma zpsym ("event");
 #pragma zpsym ("error");
+#pragma zpsym ("zp_joy");
 // #pragma zpsym ("global_string_buffer");
 
 
@@ -168,15 +170,12 @@ uint8_t Keyboard_GetNextEvent(void)
 
 
 
-// Process a joystick event (ZX KM L)
+// Process a joystick event
 // if called, we already know it is EVENT(JOYSTICK)
 // data is in event.joystick.joy0 or event.joystick.joy1
 uint8_t Keyboard_ProcessJoyEvent(void)
 {
-	static uint8_t		kj_key[5] = {'L','X','Z','M','K'};
-	uint8_t				i;
 	uint8_t				this_value = 0;
-	uint8_t				this_status;
 
 	if (event.joystick.joy0)
 	{
@@ -190,14 +189,10 @@ uint8_t Keyboard_ProcessJoyEvent(void)
 		this_value = event.joystick.joy1;
 	}
 
-	// add 64 to value to it doesn't get confused with keyboard cursor keys, which are 0x10, 0x0e, 0x02, 0x06, and del which is 0x08
-	//this_value |= 0x80;
-	
-	if (this_value != global_joy_state)
+	if (this_value != *(uint8_t*)ZP_JOY)
 	{
 		// something changed. user pressed fire, released fire, pushed left, unpushed left, etc. 
-		global_joy_state = this_value;
-		//Keyboard_AddToQueue(this_value);
+		*(uint8_t*)ZP_JOY = this_value;
 		Keyboard_AddToQueue(JOYSTICK_EVENT_OCCURRED);
 	
 		return this_value;		

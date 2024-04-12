@@ -103,11 +103,11 @@
 /*                                 Structs                                   */
 /*****************************************************************************/
 
-// typedef struct Coordinate
-// {
-//     uint8_t x;
-//     uint8_t y;
-// } Coordinate;
+typedef struct Coordinate
+{
+    uint16_t x;
+    uint16_t y;
+} Coordinate;
 // 
 // typedef struct Rectangle
 // {
