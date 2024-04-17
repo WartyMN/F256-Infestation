@@ -798,11 +798,6 @@ void Startup_InitializePlayer(void)
 	global_player->clips_[PLAYER_WEAPON_FLAMETHROWER] = 0;
 	
 	// set all bullets-in-clip counters to 0, because this is really "how many bullets are left in the current clip?"
-// 	global_player->bullets_in_clip_[PLAYER_WEAPON_PISTOL] = PLAYER_WEAPON_PISTOL_CLIP;
-// 	global_player->bullets_in_clip_[PLAYER_WEAPON_SUB_MG] = PLAYER_WEAPON_SUB_MG_CLIP;
-// 	global_player->bullets_in_clip_[PLAYER_WEAPON_HEAVY_MG] = PLAYER_WEAPON_HEAVY_MG_CLIP;
-// 	global_player->bullets_in_clip_[PLAYER_WEAPON_20MM_CANNON] = PLAYER_WEAPON_20MM_CANNON_CLIP;
-// 	global_player->bullets_in_clip_[PLAYER_WEAPON_FLAMETHROWER] = PLAYER_WEAPON_FLAMETHROWER_CLIP;
 	global_player->bullets_in_clip_[PLAYER_WEAPON_PISTOL] = 0;
 	global_player->bullets_in_clip_[PLAYER_WEAPON_SUB_MG] = 0;
 	global_player->bullets_in_clip_[PLAYER_WEAPON_HEAVY_MG] = 0;

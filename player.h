@@ -222,6 +222,10 @@ bool Player_PickUpChip(uint8_t chip_id);
 // removes the passed amount of current HP
 void Player_TakeDamage(int16_t the_damage);
 
+// try to reload the current weapon
+// returns true if player was absle to start reload process (i.e., had another clip of right kind)
+bool Player_Reload(void);
+
 
 
 // **** OTHER FUNCTIONS *****

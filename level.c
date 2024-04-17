@@ -601,11 +601,9 @@ bool Level_PlayerAttemptShoot(void)
 	else
 	{
 		// clip is empty. any other clips for this weapon?
-		if (zp_num_clips > 0)
+		if (Player_Reload() == true)
 		{
 			Buffer_NewMessage("Changing clips");
-			--zp_num_clips;
-			zp_num_bullets = global_player->bullets_in_clip_[global_player->current_weapon_id_];
 		}
 		else
 		{

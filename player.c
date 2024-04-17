@@ -262,22 +262,6 @@ void Player_DecreaseHP(void)
 }
 
 
-// removes the passed amount of current HP
-void Player_TakeDamage(int16_t the_damage)
-{
-	int16_t		the_random_number;
-	
-	if (zp_hp < the_damage)
-	{
-		zp_hp = 0;
-	}
-	else
-	{
-		zp_hp -= the_damage;	
-	}
-}
-
-
 // Sets the player's current weapon.
 // if -1 is passed, will understand to mean "no weapon"
 void Player_SetWeapon(int8_t weapon_id)
@@ -293,16 +277,8 @@ void Player_SetWeapon(int8_t weapon_id)
 	
 	// set the fast access globals for the current weapon
 	zp_num_clips = global_player->clips_[weapon_id];
+	zp_num_bullets = global_player->bullets_in_clip_[weapon_id];	
 	zp_bullet_dmg = global_weapon[weapon_id].damage_;
-
-	if (zp_num_clips > 0)
-	{
-		zp_num_bullets = global_player->bullets_in_clip_[weapon_id];
-	}
-	else
-	{
-		zp_num_bullets = 0;
-	}
 	
 	return;
 }
@@ -312,6 +288,9 @@ void Player_SetWeapon(int8_t weapon_id)
 void Player_SetNextWeapon(void)
 {
 	uint8_t		next_weapon_id;
+	
+	// update count of bullets left in clip of current weapon
+	global_player->bullets_in_clip_[global_player->current_weapon_id_] = zp_num_bullets;
 	
 	next_weapon_id = global_player->current_weapon_id_;
 	++next_weapon_id;
@@ -404,6 +383,38 @@ bool Player_PickUpChip(uint8_t chip_id)
 
 // **** COMBAT FUNCTIONS *****
 
+
+// removes the passed amount of current HP
+void Player_TakeDamage(int16_t the_damage)
+{
+	if (zp_hp < the_damage)
+	{
+		zp_hp = 0;
+	}
+	else
+	{
+		zp_hp -= the_damage;	
+	}
+}
+
+
+// try to reload the current weapon
+// returns true if player was absle to start reload process (i.e., had another clip of right kind)
+bool Player_Reload(void)
+{
+	if (zp_num_clips > 0)
+	{
+		--zp_num_clips;
+		global_player->clips_[global_player->current_weapon_id_] = zp_num_clips;
+		zp_num_bullets = global_weapon[global_player->current_weapon_id_].clip_size_;
+		
+		return true;
+	}
+	else
+	{
+		return false;
+	}
+}
 
 
 

@@ -195,7 +195,6 @@ void App_InitializeGame(void)
 uint8_t App_MainMenuLoop(void)
 {
 	uint8_t				user_input;
-	uint8_t				joy_minus_buttons;
 	bool				player_wants_to_fire;
 	uint16_t			tank_sprite_loc;
 	uint16_t			base_tank_sprite_loc;
