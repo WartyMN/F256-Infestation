@@ -82,7 +82,7 @@ void Screen_DrawUI(void)
 	
 	Text_ClearScreen(APP_FOREGROUND_COLOR, APP_BACKGROUND_COLOR);
 	
-	Text_DrawStringAtXY(10, 10, "This is Infestation!", COLOR_BRIGHT_BLUE, COLOR_BRIGHT_WHITE);
+	//Text_DrawStringAtXY(10, 10, "This is Infestation!", COLOR_BRIGHT_BLUE, COLOR_BRIGHT_WHITE);
 }
 
 
@@ -99,7 +99,19 @@ void Screen_ShowGameOver(void)
 {
 	Text_ClearScreen(APP_FOREGROUND_COLOR, APP_BACKGROUND_COLOR);
 	
-	Text_DrawStringAtXY(10, 10, "Game over!", COLOR_BRIGHT_BLUE, COLOR_BRIGHT_WHITE);
+	Text_DrawStringAtXY(15, 2, "GAME OVER!", COLOR_BRIGHT_WHITE, COLOR_BRIGHT_WHITE);
+	Text_DrawStringAtXY(1, 4, "The Humans have colonized your planet", COLOR_BRIGHT_WHITE, COLOR_BRIGHT_WHITE);
+	Text_DrawStringAtXY(1, 5, "Everything that is not poo is now the", COLOR_BRIGHT_WHITE, COLOR_BRIGHT_WHITE);
+	Text_DrawStringAtXY(1, 6, "property of the M.U.S.K. corporation,", COLOR_BRIGHT_WHITE, COLOR_BRIGHT_WHITE);
+	Text_DrawStringAtXY(1, 7, "including all robots and robot parts.", COLOR_BRIGHT_WHITE, COLOR_BRIGHT_WHITE);
+	Text_DrawStringAtXY(1, 9, "Your fellow robots are disappointed in", COLOR_BRIGHT_WHITE, COLOR_BRIGHT_WHITE);
+	Text_DrawStringAtXY(1, 10, "your lack of productivity. You are", COLOR_BRIGHT_WHITE, COLOR_BRIGHT_WHITE);
+	Text_DrawStringAtXY(1, 11, "being reassigned to street sweeper.", COLOR_BRIGHT_WHITE, COLOR_BRIGHT_WHITE);
+	Text_DrawStringAtXY(5, 14, "= Press any key to continue =", COLOR_BRIGHT_WHITE, COLOR_BRIGHT_WHITE);
+	
+	Keyboard_GetChar();
+
+	Text_ClearScreen(APP_FOREGROUND_COLOR, APP_BACKGROUND_COLOR);
 }
 
 
@@ -117,5 +129,3 @@ void Screen_ShowAppAboutInfo(void)
 	Text_DrawStringAtXY(0, 59, "This game made during April 5-7, 2024 F256 Game Jam", COLOR_BRIGHT_BLUE, COLOR_BRIGHT_WHITE);
 
 }
-
-

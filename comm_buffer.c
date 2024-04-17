@@ -66,10 +66,10 @@ extern uint8_t				zp_num_clips;
 extern uint8_t				zp_num_warps;
 extern uint8_t				zp_speed;
 extern uint16_t				zp_points;
-extern uint8_t				zp_hp;
+extern int8_t				zp_hp;
 extern uint8_t				zp_bullet_dmg;
 extern uint8_t				zp_player_dir;
-extern uint8_t				zp_lives;
+extern int8_t				zp_lives;
 
 #pragma zpsym ("zp_px");
 #pragma zpsym ("zp_py");
@@ -171,8 +171,8 @@ void Buffer_RefreshStatDisplay(bool refresh_background)
 	{
 		// redraw the only solid background part, which is the single row at the bottom of the screen used for stats
 		Text_FillBox(		
-			COMM_BUFFER_FIRST_COL, COMM_BUFFER_FIRST_ROW, 
-			COMM_BUFFER_LAST_COL, COMM_BUFFER_LAST_ROW, 
+			STAT_BOX_FIRST_COL, STAT_BOX_FIRST_ROW, 
+			STAT_BOX_LAST_COL, STAT_BOX_LAST_ROW, 
 			CH_SPACE,
 			COLOR_BRIGHT_WHITE, 
 			COLOR_BRIGHT_MAGENTA

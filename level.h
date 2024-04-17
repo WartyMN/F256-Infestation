@@ -54,14 +54,13 @@
 
 // 64 max sprites. player uses 1. 
 #define LEVEL_MAX_MISSILES				33 // max number of missiles that can appear in the game at once. need to balance player and monster firing accordingly.
-#define LEVEL_MAX_MONSTERS				10 // max number of monsters that can appear in the game at once.
-#define LEVEL_MAX_OBJECTS				20 // max number of objects of any kind that can appear in the game at once. (chips, clips, poo)
+#define LEVEL_MAX_HUMANS				10 // max number of monsters that can appear in the game at once.
 
 #define LEVEL_MAX_CHIPS					4 // max number of computer chips that can appear in the game at once.
 #define LEVEL_MAX_CLIPS					8 // max number of ammo clips that can appear in the game at once.
-#define LEVEL_MAX_POO					12 // max number of human droppings that can appear in the game at once.
+#define LEVEL_MAX_POO					8 // max number of human droppings that can appear in the game at once.
 
-// #define LEVEL_MAX_OBJECTS				27 // max of 9 (3 treasures + 6 goodies) + worst possible case of player dropping 18 objects
+#define LEVEL_MAX_SPRITES				63 // max number of non-player sprites of any kind that can appear in the game at once. (humans, missiles, chips, clips, poo)
 
 /*****************************************************************************/
 /*                        Player decisions/actions/events                    */
@@ -86,27 +85,27 @@
 // 	uint8_t		num_objects_;					// count of active objects (objects_)
 // };
 
-typedef struct Missile 
-{
-	uint16_t	x_;				// current location in pixels
-	uint16_t	y_;
-	int8_t		x_speed_;		// velocity in x dir. # of pixels per frame. negative or positive.
-	int8_t		y_speed_;
-	uint8_t		damage_;		// damage it would do if it hits monster or player.
-	uint8_t		sprite_id_;		// 1-63, the ID of the sprite associated with this object.
-} Missile;
-
-typedef struct Monster 
-{
-	uint16_t	x_;				// current location in pixels
-	uint16_t	y_;
-	int8_t		x_speed_;		// velocity in x dir. # of pixels per frame. negative or positive.
-	int8_t		y_speed_;
-	uint8_t		hp_;			// current HP
-	uint8_t		value_;			// value if killed, in points
-	uint8_t		poo_countdown_;	// # of frames until it poos
-	uint8_t		sprite_id_;		// 1-63, the ID of the sprite associated with this object.
-} Monster;
+// typedef struct Missile 
+// {
+// 	uint16_t	x_;				// current location in pixels
+// 	uint16_t	y_;
+// 	int8_t		x_speed_;		// velocity in x dir. # of pixels per frame. negative or positive.
+// 	int8_t		y_speed_;
+// 	uint8_t		damage_;		// damage it would do if it hits monster or player.
+// 	uint8_t		sprite_id_;		// 1-63, the ID of the sprite associated with this object.
+// } Missile;
+// 
+// typedef struct Monster 
+// {
+// 	uint16_t	x_;				// current location in pixels
+// 	uint16_t	y_;
+// 	int8_t		x_speed_;		// velocity in x dir. # of pixels per frame. negative or positive.
+// 	int8_t		y_speed_;
+// 	uint8_t		hp_;			// current HP
+// 	uint8_t		value_;			// value if killed, in points
+// 	uint8_t		poo_countdown_;	// # of frames until it poos
+// 	uint8_t		sprite_id_;		// 1-63, the ID of the sprite associated with this object.
+// } Monster;
 
 
 /*****************************************************************************/
@@ -119,6 +118,9 @@ typedef struct Monster
 /*****************************************************************************/
 
 // **** CONSTRUCTOR AND DESTRUCTOR *****
+
+// configure level for a new game - place humans, set up tiles, re-initialize sprites, etc. 
+void Level_Initialize(void);
 
 
 // **** SETTERS *****
@@ -152,12 +154,32 @@ typedef struct Monster
 
 
 
-// **** In-level game flow *****
+
+
+
+
+
+// ***** SCENE MANAGEMENT FUNCTIONS ****
+
+
+// update graphic state of all non-player sprites
+// changes to west facing if going left, right leg if it was left leg, etc.
+// checks current velocity and resets if human has hit edge of screen
+void Level_UpdateSprites(void);
+
+// render all active non-player sprites that need render update
+// this is the only function that actually touches the sprite registers
+void Level_RenderSprites(void);
+
+
 
 
 
 
 // **** COMBAT MODE FUNCTIONS *****
+
+// player wants to shoot: see if a missile is available, if player's gun is full, if refire time is up, etc. 
+bool Level_PlayerAttemptShoot(void);
 
 
 // // iterates through the complete level monster array looking for the ACTIVE monster that matches the coordinate and char passed

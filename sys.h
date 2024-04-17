@@ -50,6 +50,16 @@
 /*                            Macro Definitions                              */
 /*****************************************************************************/
 
+#define PARAM_SPRITES_ON		true	// parameter for Sys_SetGraphicMode
+#define PARAM_SPRITES_OFF		false	// parameter for Sys_SetGraphicMode
+#define PARAM_BITMAP_ON			true	// parameter for Sys_SetGraphicMode
+#define PARAM_BITMAP_OFF		false	// parameter for Sys_SetGraphicMode
+#define PARAM_TILES_ON			true	// parameter for Sys_SetGraphicMode
+#define PARAM_TILES_OFF			false	// parameter for Sys_SetGraphicMode
+#define PARAM_TEXT_OVERLAY_ON	true	// parameter for Sys_SetGraphicMode
+#define PARAM_TEXT_OVERLAY_OFF	false	// parameter for Sys_SetGraphicMode
+#define PARAM_TEXT_ON			true	// parameter for Sys_SetGraphicMode
+#define PARAM_TEXT_OFF			false	// parameter for Sys_SetGraphicMode
 
 
 /*****************************************************************************/

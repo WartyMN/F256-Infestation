@@ -446,7 +446,41 @@ extern uint8_t			zp_bank_num;
 // **** RECTANGLE UTILITIES *****
 
 
+// test if 2 rectangles intersect
+bool General_RectIntersect(Rectangle* r1, Rectangle* r2)
+{
+	if	(
+		(r1->x1 > r2->x2) ||
+		(r1->x2 < r2->x1) ||
+		(r1->y1 > r2->y2) ||
+		(r1->y2 < r2->y1)
+		)
+	{
+		return false;
+	}
 
+	return true;
+}
+
+
+// test if a point is within a rectangle
+bool General_PointInRect(int16_t x, int16_t y, Rectangle* r)
+{
+	//DEBUG_OUT(("%s %d: x=%i, y=%i, r->x1=%i, r->y1=%i, r->x2=%i, r->y2=%i", __func__, __LINE__, x, y,  r->x1, r->y1, r->x2, r->y2));
+	if	(
+		(x > r->x2) ||
+		(x < r->x1) ||
+		(y > r->y2) ||
+		(y < r->y1)
+		)
+	{
+		return false;
+	}
+
+	//DEBUG_OUT(("%s %d: x and y were in this rect", __func__, __LINE__));
+	
+	return true;
+}
 
 
 

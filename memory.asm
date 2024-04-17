@@ -41,6 +41,7 @@
 	.exportzp	_zp_player_dir
 	.exportzp	_zp_lives
 	.exportzp	_zp_player_dir_prev
+	.exportzp	_zp_ticktock
 	
 
 ; F256 DMA addresses and bit values
@@ -82,7 +83,7 @@ _zp_bullet_dmg:			.res 1
 _zp_player_dir:			.res 1
 _zp_lives:				.res 1
 _zp_player_dir_prev:	.res 1
-
+_zp_ticktock:			.res 2
 	
 ; ---------------------------------------------------------------
 ; uint8_t __fastcall__ Memory_SwapInNewBank(uint8_t the_bank_slot)

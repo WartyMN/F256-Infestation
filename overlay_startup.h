@@ -63,7 +63,7 @@ bool Sys_InitSystem(void);
 //! @return	Returns false if the machine is known to be incompatible with this software. 
 bool Sys_AutoConfigure(void);
 
-//! Find out what kind of machine the software is running on, and determine # of screens available
+//! Find out what kind of machine the softw`are is running on, and determine # of screens available
 //! @param	the_system: valid pointer to system object
 //! @return	Returns false if the machine is known to be incompatible with this software. 
 bool Sys_AutoDetectMachine(void);
@@ -85,6 +85,12 @@ void Startup_SetUpSprites(void);
 
 // set some player properties at start of game
 void Startup_InitializePlayer(void);
+
+// set up all non-player sprites
+void Startup_InitializeSprites(void);
+
+// Point the VICKY to our tile graphics and the tilemap
+void Startup_SetUpTileMap(void);
 
 // initialize the comms buffer and msg/status area (without drawing anything)
 void Startup_InitializeCommsBuffer(void);

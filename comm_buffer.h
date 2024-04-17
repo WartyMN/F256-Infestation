@@ -55,11 +55,11 @@
 
 
 // comms area inner box
-#define COMM_BUFFER_NUM_COLS			(SCREEN_NUM_COLS - 2) // account for box chars
-#define COMM_BUFFER_NUM_ROWS			4
+#define COMM_BUFFER_NUM_COLS			(SCREEN_NUM_COLS - 0) // account for box chars
+#define COMM_BUFFER_NUM_ROWS			3
 #define COMM_AREA_FIRST_ROW				((SCREEN_NUM_ROWS - COMM_BUFFER_NUM_ROWS) - 2)	// -2 so it starts/ends above the final row, which is the status line.
 #define COMM_AREA_LAST_ROW				(COMM_AREA_FIRST_ROW + COMM_BUFFER_NUM_ROWS)
-#define COMM_BUFFER_FIRST_COL			1	// allow for 1 col of box draw chars
+#define COMM_BUFFER_FIRST_COL			0	// not 1 because no box draw chars for this usage
 #define COMM_BUFFER_LAST_COL			(COMM_BUFFER_NUM_COLS)	// allow for 1 col of box draw chars
 #define COMM_BUFFER_FIRST_ROW			(COMM_AREA_FIRST_ROW + 1) // account for top box draw chars
 #define COMM_BUFFER_LAST_ROW			((COMM_BUFFER_FIRST_ROW + COMM_BUFFER_NUM_ROWS) - 1) // account for box draw chars and row of stats

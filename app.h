@@ -57,9 +57,9 @@
 
 // temp storage for data outside of normal cc65 visibility - extra memory!
 #define CODE_START							0x799
-#define STORAGE_INTERBANK_BUFFER			0x0400	// 1-page buffer. see cc65 memory config file. this is outside cc65 space.
-#define STORAGE_INTERBANK_BUFFER_LEN		0x0100	// 1-page buffer. see cc65 memory config file. this is outside cc65 space.
-#define STORAGE_PLAYER						(STORAGE_INTERBANK_BUFFER + STORAGE_INTERBANK_BUFFER_LEN)
+#define STORAGE_GETSTRING_BUFFER			0x0400	// interbank buffer to temporarily store string data into; used by debug and possibly other code. DO NOT REMOVE.
+#define STORAGE_GETSTRING_BUFFER_LEN		256	// 1-page buffer. see cc65 memory config file. this is outside cc65 space.
+#define STORAGE_PLAYER						(STORAGE_GETSTRING_BUFFER + STORAGE_GETSTRING_BUFFER_LEN)
 #define STORAGE_PLAYER_LEN            		26
 #define STORAGE_MISSILES					(STORAGE_PLAYER + STORAGE_PLAYER_LEN)
 #define STORAGE_MISSILES_LEN            	(6*10)
@@ -72,10 +72,64 @@
 #define STORAGE_STRING_BUFFER_1_LEN			204	// 204b buffer. see cc65 memory config file. this is outside cc65 space.
 #define MAX_ALLOWED_STRING_SIZE				(STORAGE_STRING_BUFFER_1_LEN - 1)	// arbitrary
 
-#define SPRITE_ROBOT_16F_PHYS_ADDR         0x24000
+#define SPRITE_ROBOT_16F_PHYS_ADDR			0x24000	// player graphic. 16x16, 8 primary shapes, 8 alt shapes for ticktocking
 #define SPRITE_ROBOT_16F_LOMED_ADDR			0x4000	// for use when setting sprite registers, assuming we set the 02 part already.
-#define SPRITE_HUMAN_1_8F_PHYS_ADDR        0x25000
+#define SPRITE_ROBOT_16F_LO_ADDR			0x00	// for use when setting sprite registers byte by byte
+#define SPRITE_ROBOT_16F_MED_ADDR			0x40	// for use when setting sprite registers byte by byte
+#define SPRITE_ROBOT_16F_HI_ADDR			0x02	// for use when setting sprite registers byte by byte
+
+#define SPRITE_HUMAN_1_8F_PHYS_ADDR			0x25000	// Human graphic style 1. 16x16, 4 primary shapes, 4 alt shapes for ticktocking
 #define SPRITE_HUMAN_1_8F_LOMED_ADDR		0x5000	// for use when setting sprite registers, assuming we set the 02 part already.
+#define SPRITE_HUMAN_1_8F_LO_ADDR			0x00	// for use when setting sprite registers byte by byte
+#define SPRITE_HUMAN_1_8F_MED_ADDR			0x50	// for use when setting sprite registers byte by byte
+#define SPRITE_HUMAN_1_8F_HI_ADDR			0x02	// for use when setting sprite registers byte by byte
+
+#define SPRITE_BULLET_S_PHYS_ADDR			0x25800	// the smaller bullet graphic. 8x8, 8 shapes, no alt shapes
+#define SPRITE_BULLET_S_LOMED_ADDR			0x5800	// for use when setting sprite registers, assuming we set the 02 part already.
+#define SPRITE_BULLET_S_LO_ADDR				0x00	// for use when setting sprite registers byte by byte
+#define SPRITE_BULLET_S_MED_ADDR			0x58	// for use when setting sprite registers byte by byte
+#define SPRITE_BULLET_S_HI_ADDR				0x02	// for use when setting sprite registers byte by byte
+
+#define SPRITE_BULLET_L_PHYS_ADDR			0x25A00	// the larger bullet graphic. 8x8, 8 shapes, no alt shapes
+#define SPRITE_BULLET_L_LOMED_ADDR			0x5A00	// for use when setting sprite registers, assuming we set the 02 part already.
+#define SPRITE_BULLET_L_LO_ADDR				0x00	// for use when setting sprite registers byte by byte
+#define SPRITE_BULLET_L_MED_ADDR			0x5A	// for use when setting sprite registers byte by byte
+#define SPRITE_BULLET_L_HI_ADDR				0x02	// for use when setting sprite registers byte by byte
+
+#define TILEMAP_PHYS_ADDR					0x25DA8
+#define TILEMAP_LEN							0x600	// 20 tiles across, 15 tiles call @16x16 each = 320x240, store each index as 2 bytes = 600 bytes
+#define TILEMAP_LO_ADDR						0xA8	// for use when setting tilemap registers byte by byte
+#define TILEMAP_MED_ADDR					0x5D	// for use when setting tilemap registers byte by byte
+#define TILEMAP_HI_ADDR						0x02	// for use when setting tilemap registers byte by byte
+#define TILEMAP_SLOT						0x05	// CPU slot to map it into temporarily when need to adjust
+#define TILEMAP_VALUE						0x12	// EM slot it lives in
+#define TILEMAP_ADDR_IN_CPU_SPACE			(TILEMAP_PHYS_ADDR - 0x24000 + 0xA000)	// when mapped into CPU space, the local ADDR
+
+#define TILESET_PHYS_ADDR					0x26000
+#define TILESET_LEN							4864
+#define TILESET_LO_ADDR						0x00	// for use when setting tileset registers byte by byte
+#define TILESET_MED_ADDR					0x60	// for use when setting tileset registers byte by byte
+#define TILESET_HI_ADDR						0x02	// for use when setting tileset registers byte by byte
+
+#define PLAYER_SPRITE_WIDTH					16		// used for collision detection, etc. 
+#define PLAYER_SPRITE_HEIGHT				16		// used for collision detection, etc. 
+#define PLAYER_SPRITE_TICKTOCK_DIVISOR		20000		// used for control timing of flipping between animation cells for a given sprite (tank treads, etc.)
+#define PLAYER_BYTES_PER_SHAPE				(16*16*2)	// 512 bytes between each primary shape. (1 alt shape per primary)
+#define PLAYER_L_SHIFT_PER_SHAPE			9		// 9 left shifts multiplies by 512
+
+#define HUMAN_SPRITE_WIDTH					16		// used for collision detection, etc. 
+#define HUMAN_SPRITE_HEIGHT					16		// used for collision detection, etc. 
+#define HUMAN_SPRITE_TICKTOCK_DIVISOR		300		// used for control timing of flipping between animation cells for a given sprite (left foot, right foot, etc.)
+#define HUMAN_BYTES_PER_SHAPE				(16*16*2)	// 512 bytes between each primary shape. (1 alt shape per primary)
+#define HUMAN_L_SHIFT_PER_SHAPE				9		// 9 left shifts multiplies by 512
+
+#define MISSILE_SPRITE_WIDTH				8		// used for collision detection, etc. 
+#define MISSILE_SPRITE_HEIGHT				8		// used for collision detection, etc. 
+#define MISSILE_BYTES_PER_SHAPE				(8*8)	// 64 bytes between each primary shape. (no alts for missiles)
+#define MISSILE_L_SHIFT_PER_SHAPE			6		// 6 left shifts multiplies by 64
+
+#define POINTS_PER_HUMAN					100		// points scored for each human invader eliminated
+
 
 /*****************************************************************************/
 /*                           App-wide color choices                          */
@@ -100,14 +154,14 @@
 #define ACTION_CONFIRM				CH_ENTER
 
 // navigation keys
-#define MOVE_UP						CH_CURS_UP
-#define MOVE_RIGHT					CH_CURS_RIGHT
-#define MOVE_DOWN					CH_CURS_DOWN
-#define MOVE_LEFT					CH_CURS_LEFT
-#define MOVE_UP_ALT					'w'
-#define MOVE_RIGHT_ALT				'd'
-#define MOVE_DOWN_ALT				's'
-#define MOVE_LEFT_ALT				'a'
+#define MOVE_UP						'w'
+#define MOVE_RIGHT					'd'
+#define MOVE_DOWN					'x'
+#define MOVE_LEFT					'a'
+#define MOVE_UP_RIGHT				'e'
+#define MOVE_DOWN_RIGHT				'c'
+#define MOVE_DOWN_LEFT				'z'
+#define MOVE_UP_LEFT				'q'
 // joystick 0
 #define JOY_UP_BIT					0b00000001	// 1
 #define JOY_DOWN_BIT				0b00000010  // 2
@@ -120,7 +174,8 @@
 #define ACTION_WARP					'/'
 #define ACTION_BOMB					'b'
 
-
+#define ACTION_CYCLE_WEAPON			']'
+				
 
 /*****************************************************************************/
 /*                                 Error Codes                               */

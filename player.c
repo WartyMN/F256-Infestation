@@ -51,11 +51,11 @@
 
 Weapon		global_weapon[PLAYER_MAX_WEAPONS] = 
 {
-	{PLAYER_WEAPON_PISTOL_DMG, 		PLAYER_WEAPON_PISTOL_CLIP,		PLAYER_WEAPON_PISTOL_SPEED,			PLAYER_WEAPON_PISTOL_RELOAD,		PLAYER_WEAPON_PISTOL_MAX_CLIPS,			"8mm peacemaker"},
+	{PLAYER_WEAPON_PISTOL_DMG, 		PLAYER_WEAPON_PISTOL_CLIP,		PLAYER_WEAPON_PISTOL_SPEED,			PLAYER_WEAPON_PISTOL_RELOAD,		PLAYER_WEAPON_PISTOL_MAX_CLIPS,			"8mm peacemaker  "},
 	{PLAYER_WEAPON_SUB_MG_DMG,		PLAYER_WEAPON_SUB_MG_CLIP,		PLAYER_WEAPON_SUB_MG_SPEED,			PLAYER_WEAPON_SUB_MG_RELOAD,		PLAYER_WEAPON_SUB_MG_MAX_CLIPS,			"8mm pieces maker"},
-	{PLAYER_WEAPON_HEAVY_MG_DMG,	PLAYER_WEAPON_HEAVY_MG_CLIP,	PLAYER_WEAPON_HEAVY_MG_SPEED,		PLAYER_WEAPON_HEAVY_MG_RELOAD,		PLAYER_WEAPON_HEAVY_MG_MAX_CLIPS,		"13mm auto gun"},
+	{PLAYER_WEAPON_HEAVY_MG_DMG,	PLAYER_WEAPON_HEAVY_MG_CLIP,	PLAYER_WEAPON_HEAVY_MG_SPEED,		PLAYER_WEAPON_HEAVY_MG_RELOAD,		PLAYER_WEAPON_HEAVY_MG_MAX_CLIPS,		"13mm auto gun   "},
 	{PLAYER_WEAPON_20MM_CANNON_DMG,	PLAYER_WEAPON_20MM_CANNON_CLIP,	PLAYER_WEAPON_20MM_CANNON_SPEED,	PLAYER_WEAPON_20MM_CANNON_RELOAD,	PLAYER_WEAPON_20MM_CANNON_MAX_CLIPS,	"20mm auto cannon"},
-	{PLAYER_WEAPON_FLAMETHROWER_DMG,PLAYER_WEAPON_FLAMETHROWER_CLIP,PLAYER_WEAPON_FLAMETHROWER_SPEED,	PLAYER_WEAPON_FLAMETHROWER_RELOAD,	PLAYER_WEAPON_FLAMETHROWER_MAX_CLIPS,	"MkI sterilizer"},
+	{PLAYER_WEAPON_FLAMETHROWER_DMG,PLAYER_WEAPON_FLAMETHROWER_CLIP,PLAYER_WEAPON_FLAMETHROWER_SPEED,	PLAYER_WEAPON_FLAMETHROWER_RELOAD,	PLAYER_WEAPON_FLAMETHROWER_MAX_CLIPS,	"MkI sterilizer  "},
 };
 
 Chip		global_computer_chip[MAX_CHIPS] = 
@@ -89,10 +89,10 @@ extern uint8_t				zp_num_clips;
 extern uint8_t				zp_num_warps;
 extern uint8_t				zp_speed;
 extern uint16_t				zp_points;
-extern uint8_t				zp_hp;
+extern int8_t				zp_hp;
 extern uint8_t				zp_bullet_dmg;
 extern uint8_t				zp_player_dir;
-extern uint8_t				zp_lives;
+extern int8_t				zp_lives;
 
 #pragma zpsym ("zp_px");
 #pragma zpsym ("zp_py");
@@ -219,12 +219,14 @@ void Player_LoseLife(void)
 	{
 		App_GameOver();
 	}
-	
-	--zp_lives;
-	*(uint8_t*)ZP_HP = 0;
-	Player_IncreaseHP();
-	
-	// TODO: play gong or something when life used up?
+	else
+	{
+		--zp_lives;
+		*(uint8_t*)ZP_HP = 0;
+		Player_IncreaseHP();
+		
+		// TODO: play gong or something when life used up?
+	}
 }
 
 
@@ -260,6 +262,22 @@ void Player_DecreaseHP(void)
 }
 
 
+// removes the passed amount of current HP
+void Player_TakeDamage(int16_t the_damage)
+{
+	int16_t		the_random_number;
+	
+	if (zp_hp < the_damage)
+	{
+		zp_hp = 0;
+	}
+	else
+	{
+		zp_hp -= the_damage;	
+	}
+}
+
+
 // Sets the player's current weapon.
 // if -1 is passed, will understand to mean "no weapon"
 void Player_SetWeapon(int8_t weapon_id)
@@ -274,30 +292,17 @@ void Player_SetWeapon(int8_t weapon_id)
 	global_player->current_weapon_id_ = weapon_id;
 	
 	// set the fast access globals for the current weapon
-	zp_num_bullets = global_player->bullets_in_clip_[weapon_id];
 	zp_num_clips = global_player->clips_[weapon_id];
 	zp_bullet_dmg = global_weapon[weapon_id].damage_;
 
-	// show weapon in status bar or otherwise provide feedback that weapon changed
-	// TODO
-// 	if (the_object != NULL)
-// 	{
-// 		the_object->status_ |= IN_USE;
-// 		strcpy(global_string_buffer2, Object_GetName(the_object));
-// 		sprintf(global_string_buffer, General_GetString(ID_STR_YOU_ARE_WIELDING_X), global_string_buffer2);
-// 		global_curr_weapon_char = the_object->my_char_.char_code_;
-// 	}
-// 	else
-// 	{
-// 		// bare hands!
-// 		strcpy(global_string_buffer, General_GetString(ID_STR_YOU_PUT_AWAY_WEAPON));
-// 		global_curr_weapon_char = CH_BAREHANDS;
-// 	}
-// 
-// 
-// 	// update the global char, so that status area can show icon for this weapon
-// 	// LOGIC: always do this, even if in silent mode, or player won't see a thrown weapon change to fists.
-// 	Buffer_RefreshStatDisplay(true);
+	if (zp_num_clips > 0)
+	{
+		zp_num_bullets = global_player->bullets_in_clip_[weapon_id];
+	}
+	else
+	{
+		zp_num_bullets = 0;
+	}
 	
 	return;
 }
@@ -404,25 +409,6 @@ bool Player_PickUpChip(uint8_t chip_id)
 
 // **** OTHER FUNCTIONS *****
 
-
-
-// add the player to the passed level at a random spot
-void Player_PlaceRandomly(void)
-{
-	Coordinate 	new_location;
-	
-	// pick a legal place within the playfield, which has 32 pix boundary on all sides for sprites.
-	new_location.x = App_GetRandom(320-32-32) + 32;
-	new_location.y = App_GetRandom(240-32-32) + 32;
-	
-	//Level_PickRandomLocation(&new_location);
-	// randomly picks a room, then picks a spot within that room and assigns that to the passed coordinate
-
-	// set object's location
-	Player_MoveToLocation(&new_location);
-	
-	return;
-}
 
 
 // moves player from current loc to new loc; updates visuals. move must have been validated beforehand!

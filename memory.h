@@ -51,6 +51,7 @@
 #define ZP_PLAYER_DIR		0x20	// zero-page address holding the 1-byte direction player is facing. 0=north, 1=east, 2=south, 3=west. for showing which icon to use.
 #define ZP_LIVES			0x21	// zero-page address holding the 1-byte count of remaining lives before end of game. if 0, and player's HP runs out, game is over.
 #define ZP_PLAYER_DIR_PREV	0x22	// zero-page address holding the 1-byte direction player was facing last time checked
+#define ZP_TICKTOCK			0x23	// zero-page address holding the 1-byte tick-tock frame counter used to flip sprite animations from cell0 to cell1
 
 
 // starting point for all storage to extended memory. if larger than 8K, increment as necessary

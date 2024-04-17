@@ -107,11 +107,14 @@ echo "\n**************************\nCC65 tasks complete\n***********************
 # get copy of sprite data
 cp $PROJECT/data/robot.bin $BUILD_DIR/
 cp $PROJECT/data/human1.bin $BUILD_DIR/
+cp $PROJECT/data/bullets_s.bin $BUILD_DIR/
+cp $PROJECT/data/bullets_l.bin $BUILD_DIR/
+cp $PROJECT/data/tiles.bin $BUILD_DIR/
+cp $PROJECT/data/tilemap.bin $BUILD_DIR/
 
 #build pgZ for disk
-fname=("infest.rom" "infest.rom.1" "infest.rom.2" "robot.bin" "human1.bin")
-addr=("990700" "000001" "002001" "004002" "005002")
-
+fname=("infest.rom" "infest.rom.1" "infest.rom.2" "robot.bin" "human1.bin" "bullets_s.bin" "bullets_l.bin" "tilemap.bin" "tiles.bin")
+addr=("990700" "000001" "002001" "004002" "005002" "005802" "005A02" "A85D02" "006002")
 
 for ((i = 1; i <= $#fname; i++)); do
 v1=$(stat -f%z $fname[$i]); v2=$(printf '%04x\n' $v1); v3='00'$v2; v4=$(echo -n $v3 | tac -rs ..); v5=$addr[$i]$v4;v6=$(sed -Ee 's/([A-Za-z0-9]{2})/\\\x\1/g' <<< "$v5"); echo -n $v6 > $fname[$i]'.hdr'
@@ -120,7 +123,7 @@ done
 echo -n 'Z' >> pgZ_start.hdr
 echo -n '\x99\x07\x00\x00\x00\x00' >> pgZ_end.hdr
 
-cat pgZ_start.hdr infest.rom.hdr infest.rom infest.rom.1.hdr infest.rom.1 infest.rom.2.hdr infest.rom.2 robot.bin.hdr robot.bin human1.bin.hdr human1.bin pgZ_end.hdr > infest.pgZ 
+cat pgZ_start.hdr infest.rom.hdr infest.rom infest.rom.1.hdr infest.rom.1 infest.rom.2.hdr infest.rom.2 robot.bin.hdr robot.bin human1.bin.hdr human1.bin bullets_s.bin.hdr bullets_s.bin bullets_l.bin.hdr bullets_l.bin tilemap.bin.hdr tilemap.bin tiles.bin.hdr tiles.bin pgZ_end.hdr > infest.pgZ 
 
 rm *.hdr
 

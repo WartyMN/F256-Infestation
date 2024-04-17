@@ -108,12 +108,12 @@ typedef struct Coordinate
     uint16_t x;
     uint16_t y;
 } Coordinate;
-// 
-// typedef struct Rectangle
-// {
-// 	uint8_t		MinX, MinY;
-// 	uint8_t		MaxX, MaxY;
-// } Rectangle;
+
+typedef struct Rectangle
+{
+	uint16_t		x1, y1;
+	uint16_t		x2, y2;
+} Rectangle;
 
 /*****************************************************************************/
 /*                             Global Variables                              */
@@ -225,6 +225,11 @@ char* General_GetString(uint8_t the_string_id);
 
 // **** RECTANGLE UTILITIES *****
 
+// test if 2 rectangles intersect
+bool General_RectIntersect(Rectangle* r1, Rectangle* r2);
+
+// test if a point is within a rectangle
+bool General_PointInRect(int16_t x, int16_t y, Rectangle* r);
 
 
 

@@ -20,6 +20,7 @@
 #include "comm_buffer.h"
 #include "general.h"
 #include "keyboard.h"
+#include "level.h"
 #include "memory.h"
 //#include "overlay_em.h"
 #include "overlay_startup.h"
@@ -58,27 +59,35 @@
 
 static uint8_t	joy2playerdir[11] = {0xff, 0, 4, 0xff, 6, 7, 5, 0xff, 2, 1, 3};	// takes a joystick input (minus any buttons), and returns the player direction associated with it.
 
+static bool					game_is_over = false;
 
 /*****************************************************************************/
 /*                             Global Variables                              */
 /*****************************************************************************/
 
-char*					global_string_buff1 = (char*)STORAGE_STRING_BUFFER_1;
+char*						global_string_buff1 = (char*)STORAGE_STRING_BUFFER_1;
 // global_string_buff2char*					global_string_buff2 = (char*)STORAGE_STRING_BUFFER_2;
 
-extern uint8_t			zp_joy;	// tracks what's going on with j0/j1 (for this game, both do same thing)
+extern uint8_t				zp_joy;	// tracks what's going on with j0/j1 (for this game, both do same thing)
 
-extern uint8_t			zp_bank_num;
-extern uint16_t			zp_px;
-extern uint16_t			zp_py;
-extern uint16_t			zp_player_dir;
-extern uint16_t			zp_player_dir_prev;
+extern uint8_t				zp_bank_num;
+extern uint16_t				zp_px;
+extern uint16_t				zp_py;
+extern uint8_t				zp_player_dir;
+extern uint8_t				zp_player_dir_prev;
+extern uint16_t				zp_ticktock;
+extern int8_t				zp_hp;
+extern int8_t				zp_lives;
+
 #pragma zpsym ("zp_bank_num");
 #pragma zpsym ("zp_px");
 #pragma zpsym ("zp_py");
 #pragma zpsym ("zp_joy");
 #pragma zpsym ("zp_player_dir");
 #pragma zpsym ("zp_player_dir_prev");
+#pragma zpsym ("zp_ticktock");
+#pragma zpsym ("zp_hp");
+#pragma zpsym ("zp_lives");
 
 
 /*****************************************************************************/
@@ -125,37 +134,13 @@ void App_InitializeApp(void)
 	// copy LUT into VICKY memory
 	
 	// teach VICKY where the sprites are and configure each one
-	
-	// teach VICKY where the tiles are
+	Startup_InitializeSprites();
 	
 	// set up tilemap
-#define SPRITE_ROBOT_16F_PHYS_ADDR         0x24000
-#define SPRITE_ROBOT_16F_LOMED_ADDR			0x4000	// for use when setting sprite registers, assuming we set the 02 part already.
-#define SPRITE_HUMAN_1_8F_PHYS_ADDR        0x25000
-#define SPRITE_HUMAN_1_8F_LOMED_ADDR		0x5000	// for use when setting sprite registers, assuming we set the 02 part already.
-
+	Startup_SetUpTileMap();
 	
-	// tell VICKY where the sprite it, what size sprite it is, what color to use, and to enabled it
-	Sys_SwapIOPage(VICKY_IO_PAGE_REGISTERS);
-	R16(SPRITE0_X_LO) = zp_px;		
-	R16(SPRITE0_Y_LO) = zp_py;		
-	R8(SPRITE0_CTRL) = 0x41; //Size=16x16, Layer=0, LUT=0, Enabled	
-	//R8(SPRITE0_CTRL) = 0x01; //Size=32x32, Layer=0, LUT=0, Enabled	
-
-	// tell VICKY about the first human sprite and turn it on
-	R16(SPRITE0_X_LO + SPRITE_REG_LEN) = zp_px+40;		
-	R16(SPRITE0_Y_LO + SPRITE_REG_LEN) = zp_py+40;		
-	R8(SPRITE0_CTRL + SPRITE_REG_LEN) = 0x41; //Size=16x16, Layer=0, LUT=0, Enabled	
-
-	Sys_DisableIOBank();
-
-	
-	DEBUG_OUT(("%s %d: zp_px=%x + %x", __func__, __LINE__, zp_px & 0xff, zp_px >> 8));
-
-
-	App_LoadOverlay(OVERLAY_SCREEN);
-
 	// Do first draw of UI
+	App_LoadOverlay(OVERLAY_SCREEN);
 	Screen_Render();
 	Screen_ShowAppAboutInfo();
 }
@@ -166,24 +151,43 @@ void App_InitializeGame(void)
 {
 	App_LoadOverlay(OVERLAY_SCREEN);
 	Screen_ShowAppAboutInfo();
-
-	App_LoadOverlay(OVERLAY_STARTUP);
-	
-	// draw playfield
-	
-	// set up monsters
-	
-	// set up initial objects (poo, chips, ammo)
 	
 	// set up player
+	App_LoadOverlay(OVERLAY_STARTUP);
 	Startup_InitializePlayer();
+	
+	// initialize level (draw tiles, place humans, etc.) - can move to startup if run short of memory
+	Level_Initialize();
+
+// 	// tell VICKY where the sprite it, what size sprite it is, what color to use, and to enabled it
+// 	Sys_SwapIOPage(VICKY_IO_PAGE_REGISTERS);
+// 	R16(SPRITE0_X_LO) = zp_px;		
+// 	R16(SPRITE0_Y_LO) = zp_py;		
+// 	R8(SPRITE0_CTRL) = 0x41; //Size=16x16, Layer=0, LUT=0, Enabled	
+// 	//R8(SPRITE0_CTRL) = 0x01; //Size=32x32, Layer=0, LUT=0, Enabled	
+// 
+// 	// tell VICKY about the first human sprite and turn it on
+// 	R16(SPRITE0_X_LO + SPRITE_REG_LEN) = zp_px+40;		
+// 	R16(SPRITE0_Y_LO + SPRITE_REG_LEN) = zp_py+40;		
+// 	R8(SPRITE0_CTRL + SPRITE_REG_LEN) = 0x41; //Size=16x16, Layer=0, LUT=0, Enabled	
+// 
+// 	Sys_DisableIOBank();
+// 
+// 	
+// 	//DEBUG_OUT(("%s %d: zp_px=%x + %x", __func__, __LINE__, zp_px & 0xff, zp_px >> 8));
+
 	
 	// do initial stats draw
 	Buffer_RefreshStatDisplay(true);
 	
+	// initial message
+	Buffer_NewMessage("Infestation detected! Stop the humans!");
+	
+	// reset the game over flag
+	game_is_over = false;
+	
 	// reset joystick condition map so it doesn't hang on from last game (or from junk on startup)
 	*(uint8_t*)ZP_JOY = 0;
-
 }
 
 
@@ -192,20 +196,16 @@ uint8_t App_MainMenuLoop(void)
 {
 	uint8_t				user_input;
 	uint8_t				joy_minus_buttons;
-	uint8_t				frame_odd_even = 0;
-	bool				exit_main_loop = false;
+	bool				player_wants_to_fire;
 	uint16_t			tank_sprite_loc;
 	uint16_t			base_tank_sprite_loc;
-	uint16_t			human_sprite_loc;
-	uint16_t			base_human_sprite_loc;
 
 	
 	tank_sprite_loc = base_tank_sprite_loc = SPRITE_ROBOT_16F_LOMED_ADDR;	// starting med/lo addr of tank sprite
-	human_sprite_loc = base_human_sprite_loc = SPRITE_HUMAN_1_8F_LOMED_ADDR;	// starting med/lo addr of human sprite
 	zp_player_dir_prev = zp_player_dir;
 	
 	// main loop
-	while (! exit_main_loop)
+	while (! game_is_over)
 	{
 		// turn off cursor - seems to turn itself off when kernal detects cursor position has changed. 
 		//Sys_EnableTextModeCursor(false);
@@ -214,128 +214,113 @@ uint8_t App_MainMenuLoop(void)
 		//sprintf(global_string_buffer, "sp: %x%x", *(char*)0x52, *(char*)0x51);
 		//Buffer_NewMessage(global_string_buffer);
 		
-		do
-		{
+		// increment the frame counter we use to check when sprite animations should change from cell0 to cell1 to cell0, etc. 
+		++zp_ticktock;
+		player_wants_to_fire = false;
+		
 						
-			// ask Screen to establish which menu items should be available (this just keeps this code out of MAIN to maximize heap space)
-			App_LoadOverlay(OVERLAY_SCREEN);
-			
-			// ask Screen to get user input and vet it against the menu items that are currently enabled
-			// only inputs for active menu items will cause an input to be returned here
-			user_input = Keyboard_GetKeyIfPressed();
-			// Get user input and vet it against the menu items that are currently enabled
-			// returns ACTION_INVALID_INPUT if the key pressed was for a disabled menu item
-			// returns the key pressed if it matched an enabled menu item, or if wasn't a known (to Screen) input. This lets App still allow for cursor keys, etc, which aren't represented by menu items
+		// ask Screen to establish which menu items should be available (this just keeps this code out of MAIN to maximize heap space)
+		//App_LoadOverlay(OVERLAY_SCREEN);
+		
+		// ask Screen to get user input and vet it against the menu items that are currently enabled
+		// only inputs for active menu items will cause an input to be returned here
+		user_input = Keyboard_GetKeyIfPressed();
+		// Get user input and vet it against the menu items that are currently enabled
+		// returns ACTION_INVALID_INPUT if the key pressed was for a disabled menu item
+		// returns the key pressed if it matched an enabled menu item, or if wasn't a known (to Screen) input. This lets App still allow for cursor keys, etc, which aren't represented by menu items
 
-			//DEBUG_OUT(("%s %d: user_input=%u", __func__ , __LINE__, user_input));
-			
-			// first switch: for file menu only, and skip if file menu is inactive
-			//   slightly inefficient in that it has to go through them all twice, but this is not a performance bottleneck
-			//   note: we also put the sort commands here because it doesn't make sense to sort if no files
-			switch (user_input)
-			{
-				case MOVE_LEFT:
-				case MOVE_LEFT_ALT:
-					Text_DrawStringAtXY(0, 0, "left        ", COLOR_BRIGHT_WHITE, COLOR_GREEN);
-					--zp_px;
-					break;
-
-				case MOVE_RIGHT:
-				case MOVE_RIGHT_ALT:
-					Text_DrawStringAtXY(0, 0, "right       ", COLOR_BRIGHT_WHITE, COLOR_GREEN);
-					++zp_px;
-					break;
-
-				case MOVE_UP:
-				case MOVE_UP_ALT:
-					Text_DrawStringAtXY(0, 0, "up          ", COLOR_BRIGHT_WHITE, COLOR_GREEN);
-					--zp_px;
-					break;
-
-				case MOVE_DOWN:
-				case MOVE_DOWN_ALT:
-					Text_DrawStringAtXY(0, 0, "down        ", COLOR_BRIGHT_WHITE, COLOR_GREEN);
-					++zp_px;
-					break;
-
-				case ACTION_FIRE:
-					//
-					Text_DrawStringAtXY(0, 0, "fire        ", COLOR_BRIGHT_WHITE, COLOR_GREEN);
-					break;
-					
-				case ACTION_WARP:
-					//
-					Text_DrawStringAtXY(0, 0, "warp        ", COLOR_BRIGHT_WHITE, COLOR_GREEN);
-					break;
-					
-				case ACTION_BOMB:
-					//
-					Text_DrawStringAtXY(0, 0, "grenade     ", COLOR_BRIGHT_WHITE, COLOR_GREEN);
-					break;
+		//DEBUG_OUT(("%s %d: user_input=%u", __func__ , __LINE__, user_input));
+		
+		// first switch: normalize any alt keyboard input so we can merge with Joy input afterwards
+		switch (user_input)
+		{
+			case MOVE_UP:
+				zp_py -= 2;
+				zp_player_dir = PLAYER_DIR_NORTH;
+				user_input = ACTION_INVALID_INPUT;
+				break;
 				
-// 				case JOYSTICK_EVENT_OCCURRED:
-// 					// some change happened with one of the joysticks. 
-// 					// can check global_joy_state to see what's going on
-// 					//sprintf(global_string_buff1, "%d %x '%c'", *(uint8_t*)ZP_JOY, *(uint8_t*)ZP_JOY, *(uint8_t*)ZP_JOY);
-// 					//Text_DrawStringAtXY(0, 1, global_string_buff1, COLOR_BRIGHT_WHITE, COLOR_RED);
-// 					//Text_DrawStringAtXY(0, 2, "                                       ", COLOR_BRIGHT_WHITE, COLOR_RED);
-// 					
-// 					if (*(uint8_t*)ZP_JOY & JOY_UP_BIT)
-// 					{
-// 						//Buffer_NewMessage("joy up");
-// 						DEBUG_OUT(("%s %d: new joy input: UP", __func__, __LINE__));
-// 					}
-// 
-// 					if (*(uint8_t*)ZP_JOY & JOY_DOWN_BIT)
-// 					{
-// 						//Buffer_NewMessage("joy down");
-// 						DEBUG_OUT(("%s %d: new joy input: DOWN", __func__, __LINE__));
-// 					}
-// 
-// 					if (*(uint8_t*)ZP_JOY & JOY_LEFT_BIT)
-// 					{
-// 						//Buffer_NewMessage("joy left");
-// 						DEBUG_OUT(("%s %d: new joy input: LEFT", __func__, __LINE__));
-// 					}
-// 
-// 					if (*(uint8_t*)ZP_JOY & JOY_RIGHT_BIT)
-// 					{
-// 						//Buffer_NewMessage("joy right");
-// 						DEBUG_OUT(("%s %d: new joy input: RIGHT", __func__, __LINE__));
-// 					}
-// 
-// 					if (*(uint8_t*)ZP_JOY & JOY_FIRE1_BIT)
-// 					{
-// 						//Buffer_NewMessage("joy fire 1");
-// 						DEBUG_OUT(("%s %d: new joy input: FIRE 1", __func__, __LINE__));
-// 					}
-// 
-// 					if (*(uint8_t*)ZP_JOY & JOY_FIRE2_BIT)
-// 					{
-// 						//Buffer_NewMessage("joy fire 2");
-// 						DEBUG_OUT(("%s %d: new joy input: FIRE 2", __func__, __LINE__));
-// 					}
-// 				
-// 					break;
+			case MOVE_RIGHT:
+				zp_px += 2;
+				zp_player_dir = PLAYER_DIR_EAST;
+				user_input = ACTION_INVALID_INPUT;
+				break;
 				
-				case 0:
-					break;
-					
-				default:
-					//sprintf(global_string_buff1, "didn't know key %u", user_input);
-					//Buffer_NewMessage(global_string_buff1);
-					//DEBUG_OUT(("%s %d: didn't know key %u", __func__, __LINE__, user_input));
-					//fatal(user_input);
-					//sprintf(global_string_buff1, "%d %x '%c'", user_input, user_input, user_input);
-					//Text_DrawStringAtXY(0, 0, global_string_buff1, COLOR_BRIGHT_WHITE, COLOR_BLUE);
-					//Text_SetCharAtXY(++zp_px, zp_py, user_input);
-					user_input = ACTION_INVALID_INPUT;
-					break;
-			}
-			
-			// regardless of changes to input, check for joystick switches that are down
-
-
+			case MOVE_DOWN:
+				zp_py += 2;
+				zp_player_dir = PLAYER_DIR_SOUTH;
+				user_input = ACTION_INVALID_INPUT;
+				break;
+				
+			case MOVE_LEFT:
+				zp_px -= 2;
+				zp_player_dir = PLAYER_DIR_WEST;
+				user_input = ACTION_INVALID_INPUT;
+				break;
+				
+			case MOVE_UP_RIGHT:
+				zp_px += 2;
+				zp_py -= 2;
+				zp_player_dir = PLAYER_DIR_NORTHEAST;
+				user_input = ACTION_INVALID_INPUT;
+				break;
+				
+			case MOVE_DOWN_RIGHT:
+				zp_px += 2;
+				zp_py += 2;
+				zp_player_dir = PLAYER_DIR_SOUTHEAST;
+				user_input = ACTION_INVALID_INPUT;
+				break;
+				
+			case MOVE_DOWN_LEFT:
+				zp_px -= 2;
+				zp_py += 2;
+				zp_player_dir = PLAYER_DIR_SOUTHWEST;
+				user_input = ACTION_INVALID_INPUT;
+				break;
+				
+			case MOVE_UP_LEFT:
+				zp_px -= 2;
+				zp_py -= 2;
+				zp_player_dir = PLAYER_DIR_NORTHWEST;
+				user_input = ACTION_INVALID_INPUT;
+				break;
+				
+			case ACTION_FIRE:
+				player_wants_to_fire = true;
+				break;
+				
+			case ACTION_WARP:
+				user_input = ACTION_INVALID_INPUT;
+				break;
+				
+			case ACTION_BOMB:
+				user_input = ACTION_INVALID_INPUT;
+				break;
+				
+			case ACTION_CYCLE_WEAPON:
+				Player_SetNextWeapon();
+				break;
+								
+			case 0:
+				user_input = ACTION_INVALID_INPUT;
+				break;
+				
+			default:
+				//sprintf(global_string_buff1, "didn't know key %u", user_input);
+				//Buffer_NewMessage(global_string_buff1);
+				//DEBUG_OUT(("%s %d: didn't know key %u", __func__, __LINE__, user_input));
+				//fatal(user_input);
+				//sprintf(global_string_buff1, "%d %x '%c'", user_input, user_input, user_input);
+				//Text_DrawStringAtXY(0, 0, global_string_buff1, COLOR_BRIGHT_WHITE, COLOR_BLUE);
+				//Text_SetCharAtXY(++zp_px, zp_py, user_input);
+				user_input = ACTION_INVALID_INPUT;
+				break;
+		}
+		
+		// handle joystick actions if no keyboard input was received
+		if (user_input == ACTION_INVALID_INPUT)
+		{
 			if (*(uint8_t*)ZP_JOY & JOY_UP_BIT)
 			{
 				zp_py -= 2;
@@ -360,14 +345,14 @@ uint8_t App_MainMenuLoop(void)
 
 			if (*(uint8_t*)ZP_JOY & JOY_FIRE1_BIT)
 			{
-				//
+				player_wants_to_fire = true;
 			}
 
 			if (*(uint8_t*)ZP_JOY & JOY_FIRE2_BIT)
 			{
-				//
+				Player_SetNextWeapon();
 			}
-			
+
 			// got joy buttons, clear them and set current player dir based on joy directions pushed
 			zp_joy &= 0b00001111;
 			
@@ -376,82 +361,83 @@ uint8_t App_MainMenuLoop(void)
 				// dir changed
 				zp_player_dir = joy2playerdir[*(uint8_t*)ZP_JOY];
 			}
-		
-			Player_ValidateLocation();
+		}
+				
+		Player_ValidateLocation();
 
-			// point to the appropriate tank shape
-			// LOGIC:
-			//   each sprite shape is 16x16=256 bytes. there are 16 total shapes, so exactly 4k of data.
-			//   sprites are arranged in clockwise order, from 12:00. each position has 2 shapes, frame1/frame2, for per-frame anim.
-			//   to get the right shape:
-			//     1. add 0 or FF for the frame offset
-			//     2. multiply zp_player_dir by 512 (PLAYER_DIR_NORTH = 0... PLAYER_DIR_NORTHWEST=7)
-			//        to make things fast, we have a preset offset calculation table.
+		// point to the appropriate tank shape
+		// LOGIC:
+		//   each sprite shape is 16x16=256 bytes. there are 16 total shapes, so exactly 4k of data.
+		//   sprites are arranged in clockwise order, from 12:00. each position has 2 shapes, frame1/frame2, for per-frame anim.
+		//   to get the right shape:
+		//     1. add 0 or FF for the frame offset
+		//     2. multiply zp_player_dir by 512 (PLAYER_DIR_NORTH = 0... PLAYER_DIR_NORTHWEST=7)
+		//        to make things fast, we have a preset offset calculation table.
 
 
-			if (zp_player_dir != zp_player_dir_prev)
-			{
-				tank_sprite_loc = SPRITE_ROBOT_16F_LOMED_ADDR;
-				tank_sprite_loc += (uint16_t)zp_player_dir * (uint16_t)512;
-				base_tank_sprite_loc = tank_sprite_loc;
-				zp_player_dir_prev = zp_player_dir;
+		if (zp_player_dir != zp_player_dir_prev)
+		{
+			tank_sprite_loc = SPRITE_ROBOT_16F_LOMED_ADDR;
+			tank_sprite_loc += (uint16_t)zp_player_dir * (uint16_t)512;
+			base_tank_sprite_loc = tank_sprite_loc;
+			zp_player_dir_prev = zp_player_dir;
 
-				// temp animate human in parallel with tank
-				human_sprite_loc = SPRITE_HUMAN_1_8F_LOMED_ADDR;
-				human_sprite_loc += (uint16_t)(zp_player_dir/2) * (uint16_t)512;
-				base_human_sprite_loc = human_sprite_loc;
-
-				// animate by swapping to the other frame of sprite
-				//tank_sprite_loc -= 0xff * (frame_odd_even % 2);
+			// animate by swapping to the other frame of sprite
+			//tank_sprite_loc -= 0xff * (frame_odd_even % 2);
 // 				if ( (frame_odd_even % 2) == 0)
 // 				{
 // 					tank_sprite_loc -= 0xff;
 // 				}
+		}
+		else
+		{
+			// animate by swapping to the other frame of sprite
+
+			//tank_sprite_loc += 0xff * (frame_odd_even % 2);
+			if ( (zp_ticktock % PLAYER_SPRITE_TICKTOCK_DIVISOR) == 0)
+			{
+				tank_sprite_loc += (uint16_t)0x0100;
 			}
 			else
 			{
-				// animate by swapping to the other frame of sprite
-				++frame_odd_even;
-
-				//tank_sprite_loc += 0xff * (frame_odd_even % 2);
-				if ( (frame_odd_even % 4) == 0)
-				{
-					tank_sprite_loc += (uint16_t)0x0100;
-					human_sprite_loc += (uint16_t)0x0100;
-				}
-				else
-				{
-					tank_sprite_loc = base_tank_sprite_loc;
-					human_sprite_loc = base_human_sprite_loc;
-				}
+				tank_sprite_loc = base_tank_sprite_loc;
 			}
+		}
 
-			General_DelayTicks(800);
-			
-			//tank_sprite_loc += 256;
-			
-			Sys_SwapIOPage(VICKY_IO_PAGE_REGISTERS);
-			R8(SPRITE0_ADDR_LO) = tank_sprite_loc & 0xFF;
-			R8(SPRITE0_ADDR_MED) = (tank_sprite_loc) >> 8;
-			R8(SPRITE0_ADDR_LO + SPRITE_REG_LEN) = human_sprite_loc & 0xFF;
-			R8(SPRITE0_ADDR_MED + SPRITE_REG_LEN) = (human_sprite_loc) >> 8;
+		//General_DelayTicks(800);
+		
+		Sys_SwapIOPage(VICKY_IO_PAGE_REGISTERS);
+		R8(SPRITE0_ADDR_LO) = tank_sprite_loc & 0xFF;
+		R8(SPRITE0_ADDR_MED) = (tank_sprite_loc) >> 8;
 
-			//R8(SPRITE0_ADDR_HI) = 0x03;	// we are placing robot sprites starting at 03 6000 in EM
-			Sys_DisableIOBank();
-			
-			// update sprite pos
-			Sys_SwapIOPage(VICKY_IO_PAGE_REGISTERS);
-			R16(SPRITE0_X_LO) = zp_px;		
-			R16(SPRITE0_Y_LO) = zp_py;		
-			R16(SPRITE0_X_LO + SPRITE_REG_LEN) = zp_px + 20;		
-			R16(SPRITE0_Y_LO + SPRITE_REG_LEN) = zp_py + 10;		
-			Sys_DisableIOBank();
-			
-			Buffer_RefreshStatDisplay(false);
-			
-			//DEBUG_OUT(("%s %d: X/Y=%u,%u; zp_px=%u + %u, %u + %u, vicky x=%u, y=%u, vickyH x=%u, y=%u", __func__, __LINE__, zp_px, zp_py, zp_px & 0xff, zp_px >> 8, *(uint8_t*)ZP_PX, *(uint8_t*)(ZP_PX+1), vicky_x, vicky_y, vicky_xh, vicky_yh));
+		//R8(SPRITE0_ADDR_HI) = 0x03;	// we are placing robot sprites starting at 03 6000 in EM
+		Sys_DisableIOBank();
+		
+		// update sprite pos
+		Sys_SwapIOPage(VICKY_IO_PAGE_REGISTERS);
+		R16(SPRITE0_X_LO) = zp_px;		
+		R16(SPRITE0_Y_LO) = zp_py;		
+		Sys_DisableIOBank();
+		
+		if (player_wants_to_fire == true)
+		{
+			Level_PlayerAttemptShoot();
+		}
+		
+		// update and move humans around, check for deaths, etc. 
+		Level_UpdateSprites();
+		Level_RenderSprites();
 
-		} while (user_input == ACTION_INVALID_INPUT);				
+		// check if player died, etc. 
+		if (zp_hp < 1)
+		{
+			Player_LoseLife();
+		}
+		
+		Buffer_RefreshStatDisplay(true);
+		
+		//DEBUG_OUT(("%s %d: X/Y=%u,%u; player_wants_to_fire=%u", __func__, __LINE__, zp_px, zp_py, player_wants_to_fire));
+
 	} // while for exit loop
 	
 	// normal returns all handled above. this is a catch-all
@@ -481,8 +467,14 @@ void App_LoadOverlay(uint8_t the_overlay_em_bank_number)
 // handle game over scenario: say you are dead, stop game, show hi scores, etc, etc.
 void App_GameOver(void)
 {
+	//Buffer_NewMessage("Your last chassis has been destroyed. You being re-assigned to: street sweeper");
+	Buffer_NewMessage("You blew it. Hoomans get this planet.");
+				
+	// set the game over flag so that main menu knows to stop doing what it's doing
+	game_is_over = true;
+	
 	App_LoadOverlay(OVERLAY_SCREEN);
-	Screen_ShowGameOver();	
+	Screen_ShowGameOver();
 }
 
 
@@ -527,9 +519,13 @@ uint16_t App_GetRandom(uint16_t the_range)
 int main(void)
 {
 	App_InitializeApp();
-	App_InitializeGame();
 	
-	App_MainMenuLoop();
+	while (1)
+	{
+		App_InitializeGame();
+		
+		App_MainMenuLoop();
+	}
 	
 	// restore screen, etc.
 	App_Exit(ERROR_NO_ERROR);

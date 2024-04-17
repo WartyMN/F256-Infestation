@@ -39,12 +39,11 @@
 #define PARAM_SET_ITEM_WITH_MESSAGE			false	// boolean parameter for Player_SetWeapon, etc. Will send comms buffer message.
 
 #define PLAYER_STARTING_LIVES				3
-#define PLAYER_PER_LEVEL_HP_BASE			5
+#define PLAYER_PER_LEVEL_HP_BASE			25
 #define PLAYER_MAX_HP						255
 #define PLAYER_MAX_WEAPONS					5		// the types of weapons player is pre-supplied with
 #define PLAYER_STARTING_WARP_COUNT			3
 #define PLAYER_MAX_WARP_COUNT				6
-#define PLAYER_STARTING_LIVES				3
 #define PLAYER_POINTS_FOR_EXTRA_LIFE		10000
 
 #define PLAYER_DIR_NORTH					0		// directions player is facing: used to pick sprite model and to know which way to fire bullets
@@ -105,6 +104,7 @@
 #define PLAYER_WEAPON_FLAMETHROWER_STARTING_CLIPS	4
 
 #define PLAYER_CRUSH_DAMAGE					10	// damage player does when running into/over enemies
+#define PLAYER_DAMAGE_FROM_SLIMING			15	// damage player absorbs when running over a human
 
 #define IS_SLOW			0x20 // gets 1 move every 2 turns
 #define IS_SPEEDY		0x40 // gets 2 moves per turn
@@ -219,13 +219,12 @@ bool Player_PickUpChip(uint8_t chip_id);
 
 // ***** COMBAT FUNCTIONS ****
 
+// removes the passed amount of current HP
+void Player_TakeDamage(int16_t the_damage);
 
 
 
 // **** OTHER FUNCTIONS *****
-
-// add the player to the passed level at a random spot
-void Player_PlaceRandomly(void);
 
 // // return the rank the player has for the passed badge type
 // // returns -1 if player has not earned any badges of this type

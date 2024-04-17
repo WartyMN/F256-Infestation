@@ -92,8 +92,31 @@
 #define BITMAP_CTRL						0xd100		//!> bitmap control register	
 #define BITMAP_L0_VRAM_ADDR_L			0xd101		//!> bitmap VRAM address pointer)		
 #define BITMAP_L0_VRAM_ADDR_M			0xd102		//!> bitmap VRAM address pointer)		
-#define BITMAP_L0_VRAM_ADDR_H			0xd103		//!> bitmap VRAM address pointer)		
-#define TILE_CTRL						0xd200		//!> tile control register		
+#define BITMAP_L0_VRAM_ADDR_H			0xd103		//!> bitmap VRAM address pointer)
+
+
+// ** tiles and tile maps -- see also VICKY_LAYER_CTRL_1 and VICKY_LAYER_CTRL_2
+
+#define TILE0_CTRL						0xd200		//!> tile control register for tilemap #1
+#define TILE1_CTRL						0xd20c		//!> tile control register for tilemap #2
+#define TILE2_CTRL						0xd218		//!> tile control register for tilemap #3
+
+#define TILE_REG_LEN					0x0c		// number of bytes between start of one tilemap register and the next
+#define TILE_CTRL_OFFSET_ADDR_LO		0x01		// offset from the tilemap control to the low address
+#define TILE_CTRL_OFFSET_ADDR_MED		0x02		// offset from the tilemap control to the medium address
+#define TILE_CTRL_OFFSET_ADDR_HI		0x03		// offset from the tilemap control to the high address
+#define TILE_CTRL_OFFSET_MAP_SIZE_X		0x04		// offset from the tilemap control to num columns in map
+#define TILE_CTRL_OFFSET_MAP_SIZE_Y		0x06		// offset from the tilemap control to num rows in map
+#define TILE_CTRL_OFFSET_SCROLL_X_LO	0x08		// offset from the tilemap control horizontal scrollowing (lo)
+#define TILE_CTRL_OFFSET_SCROLL_X_HI	0x09		// offset from the tilemap control horizontal scrollowing (hi)
+#define TILE_CTRL_OFFSET_SCROLL_Y_LO	0x0a		// offset from the tilemap control vertical scrollowing (lo)
+#define TILE_CTRL_OFFSET_SCROLL_Y_HI	0x0b		// offset from the tilemap control vertical scrollowing (hi)
+
+#define TILESET0_ADDR_LO				0xd280		// 20-bit address of tileset, lo
+#define TILESET0_ADDR_MED				0xd281		// 20-bit address of tileset, medium
+#define TILESET0_ADDR_HI				0xd282		// 20-bit address of tileset, hi
+#define TILESET0_SHAPE					0xd283		// 0 if tiles are arranged in 1 vertical column, or 8 if in a square
+#define TILESET_REG_LEN					0x04		// number of bytes between start of one tileset register and the next
 
 
 // ** serial comms related
